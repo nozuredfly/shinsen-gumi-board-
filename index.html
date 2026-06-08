@@ -1,0 +1,1762 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>新鮮組 米作り作業管理（カレンダーなし）</title>
+<!-- フォントは最小限（Noto Sans JPのみ） -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<!-- Chart.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
+<style>
+:root{
+  --bg:#2c2416;
+  --surface:#f5f0e8;
+  --surface2:#ede8df;
+  --border:#c8b97a;
+  --border2:#d8c98a;
+  --bamboo:#5a7a3a;
+  --deep:#3a5a20;
+  --soil:#8b6b3d;
+  --sky:#5588aa;
+  --red:#c0392b;
+  --gold:#c8920a;
+  --text:#1a1208;
+  --muted:#5a4020;
+  --card:#fffcf5;
+  --head-bg:linear-gradient(135deg,#5a7a3a,#3a5a20);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);
+  background-image:
+    repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(200,185,122,.1) 39px,rgba(200,185,122,.1) 40px),
+    repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(200,185,122,.1) 39px,rgba(200,185,122,.1) 40px);
+  min-height:100vh;
+  font-family:'Noto Sans JP',sans-serif;
+  color:var(--text);
+  font-size:14px;
+}
+
+/* ── HEADER ── */
+.hdr{
+  text-align:center;
+  padding:16px 16px 10px;
+}
+.hdr-inner{
+  display:inline-flex;flex-direction:column;align-items:center;
+  background:var(--card);border:3px solid var(--border);
+  border-radius:4px;padding:10px 40px;
+  box-shadow:4px 4px 0 var(--soil);
+  position:relative;
+}
+.hdr-inner::before,.hdr-inner::after{
+  content:'✦';color:var(--bamboo);
+  position:absolute;top:50%;transform:translateY(-50%);
+  font-size:16px;
+}
+.hdr-inner::before{left:10px;}
+.hdr-inner::after{right:10px;}
+.hdr-title{font-size:clamp(22px,5vw,36px);font-weight:900;color:var(--deep);letter-spacing:.2em;}
+.hdr-sub{font-size:10px;color:var(--muted);letter-spacing:.25em;margin-top:2px;}
+.hdr-date{font-size:13px;color:var(--soil);margin-top:4px;font-weight:700;}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:3px;max-width:1300px;margin:10px auto 0;padding:0 12px;}
+.tab{
+  flex:1;padding:10px 6px;text-align:center;
+  background:rgba(245,240,232,.4);border:2px solid rgba(200,185,122,.5);
+  border-bottom:none;border-radius:6px 6px 0 0;
+  font-size:13px;font-weight:700;color:rgba(245,240,232,.9);
+  cursor:pointer;transition:.15s;
+}
+.tab.on{background:var(--card);color:var(--deep);border-color:var(--border);}
+.tab:hover:not(.on){background:rgba(245,240,232,.6);}
+
+/* ── STATUS BAR ── */
+.sbar{
+  max-width:1300px;margin:0 auto;
+  background:rgba(245,240,232,.85);border:1px solid var(--border);border-top:none;
+  padding:5px 14px;display:flex;justify-content:space-between;align-items:center;
+  font-size:12px;color:var(--muted);
+}
+.dot{width:7px;height:7px;border-radius:50%;background:#5c9e3a;display:inline-block;margin-right:5px;animation:pu 2s infinite;}
+@keyframes pu{0%,100%{opacity:1}50%{opacity:.3}}
+.rbtn{
+  background:var(--bamboo);color:#fff;border:none;border-radius:3px;
+  padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;
+}
+
+/* ── PANELS ── */
+.panel{display:none;max-width:1300px;margin:0 auto;padding:12px;}
+.panel.on{display:block;}
+
+/* ── GRID ── */
+.g2{display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-bottom:12px;}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;}
+.gf{margin-bottom:12px;}
+.g2c{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:860px){.g2,.g3,.g2c{grid-template-columns:1fr;}}
+
+/* ── CARD ── */
+.card{background:var(--card);border:2px solid var(--border);border-radius:4px;box-shadow:3px 3px 0 var(--soil);overflow:hidden;margin-bottom:12px;}
+.card:last-child{margin-bottom:0;}
+.ch{background:var(--head-bg);padding:8px 14px;display:flex;align-items:center;gap:8px;}
+.ch-t{font-size:13px;font-weight:700;color:#fff;letter-spacing:.1em;flex:1;}
+.ch-b{font-size:11px;background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;border-radius:2px;}
+.cb{padding:12px 14px;}
+
+/* ── CALENDAR ── */
+.ci{border-bottom:1px dashed var(--border2);padding:7px 0;display:flex;gap:10px;align-items:flex-start;}
+.ci:last-child{border-bottom:none;}
+.cd{min-width:44px;text-align:center;border-radius:3px;padding:4px;color:#fff;flex-shrink:0;}
+.cd-n{font-size:20px;font-weight:900;line-height:1;}
+.cd-w{font-size:10px;margin-top:1px;}
+.ct{font-size:14px;font-weight:700;color:var(--text);}
+.ctm{font-size:11px;color:var(--soil);margin-bottom:2px;}
+.cad{font-size:10px;background:var(--gold);color:#fff;border-radius:2px;padding:1px 6px;display:inline-block;}
+
+/* ── WEATHER ── */
+.wg{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.wd{text-align:center;background:rgba(200,185,122,.15);border:1px solid var(--border2);border-radius:4px;padding:6px 2px;}
+.wd.td{background:rgba(90,122,58,.2);border-color:var(--bamboo);}
+.wdt{font-size:10px;color:var(--muted);font-weight:700;}
+.wdi{font-size:20px;margin:3px 0;}
+.wdl{font-size:9px;color:var(--muted);margin-bottom:2px;min-height:22px;line-height:1.2;}
+.wdh{font-size:14px;font-weight:900;color:var(--red);}
+.wdlo{font-size:13px;color:var(--sky);}
+.wdr{font-size:10px;color:#4477aa;margin-top:2px;}
+.wsrc{font-size:10px;color:var(--muted);text-align:right;margin-top:5px;}
+
+/* ── CHART ── */
+.cw{position:relative;height:190px;}
+
+/* ── RICE ── */
+.rkpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+.kpi{background:rgba(200,185,122,.15);border:1px solid var(--border2);border-radius:4px;padding:10px;}
+.kl{font-size:10px;color:var(--muted);font-weight:700;margin-bottom:3px;}
+.kv{font-size:18px;font-weight:900;color:var(--text);}
+.ks{font-size:11px;margin-top:3px;}
+.up{color:var(--red);}.dn{color:var(--sky);}.fl{color:var(--muted);}
+.vp{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
+.vb{font-size:11px;font-weight:700;padding:4px 10px;border:2px solid var(--border);border-radius:3px;cursor:pointer;color:var(--muted);background:transparent;transition:.15s;}
+.vb.on,.vb:hover{color:var(--deep);border-color:var(--bamboo);background:rgba(90,122,58,.1);}
+
+/* ── TAUE CALC ── */
+.ilbl{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;letter-spacing:.05em;}
+.igrp{margin-bottom:14px;}
+.irow{display:flex;align-items:center;gap:8px;}
+.ti{background:#fff;border:2px solid var(--border);color:var(--deep);font-family:'Noto Sans JP',sans-serif;font-size:16px;font-weight:700;padding:9px 12px;border-radius:4px;width:100%;outline:none;}
+.ti:focus{border-color:var(--bamboo);}
+.iunt{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;}
+.tsel{background:#fff;border:2px solid var(--border);color:var(--text);font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:700;padding:9px 12px;border-radius:4px;width:100%;outline:none;}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;}
+.chip{font-size:11px;font-weight:700;padding:4px 10px;border:2px solid var(--border2);border-radius:3px;cursor:pointer;color:var(--muted);background:transparent;transition:.15s;}
+.chip:hover,.chip.on{color:var(--deep);border-color:var(--bamboo);background:rgba(90,122,58,.1);}
+.cbtn{width:100%;padding:13px;margin-top:6px;background:var(--bamboo);color:#fff;border:none;border-radius:4px;font-size:15px;font-weight:700;font-family:'Noto Sans JP',sans-serif;cursor:pointer;letter-spacing:.1em;transition:.15s;}
+.cbtn:hover{background:var(--deep);}
+.rp{background:rgba(200,185,122,.1);border:2px solid var(--border);border-radius:4px;padding:14px;}
+.rt{font-size:11px;font-weight:700;color:var(--bamboo);letter-spacing:.15em;margin-bottom:12px;}
+.rg{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.ri{border:1px solid var(--border2);border-radius:4px;padding:10px;}
+.ri.hl{border-color:var(--bamboo);background:rgba(90,122,58,.08);grid-column:span 2;}
+.ri.hl .rv{color:var(--bamboo);font-size:28px;}
+.rl{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:3px;}
+.rv{font-size:19px;font-weight:900;color:var(--text);}
+.ru{font-size:11px;color:var(--muted);}
+.rnote{margin-top:10px;padding:9px 12px;background:rgba(192,57,43,.08);border:1px solid rgba(192,57,43,.3);border-radius:4px;font-size:12px;color:var(--red);line-height:1.6;}
+.rnote.ok{background:rgba(90,122,58,.08);border-color:rgba(90,122,58,.3);color:var(--bamboo);}
+.fl-row{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:7px 10px;border:1px solid var(--border2);border-radius:4px;margin-bottom:5px;background:rgba(200,185,122,.08);}
+.fl-nm{font-size:13px;font-weight:700;}
+.fl-ar{font-size:12px;color:var(--muted);font-weight:700;}
+.fl-bx{font-size:15px;font-weight:900;color:var(--bamboo);}
+.fl-dl{background:transparent;border:1px solid rgba(192,57,43,.4);color:rgba(192,57,43,.7);border-radius:3px;padding:2px 8px;font-size:11px;cursor:pointer;}
+.fl-dl:hover{border-color:var(--red);color:var(--red);}
+.af{display:flex;gap:6px;margin-top:6px;}
+.ai{background:#fff;border:2px solid var(--border);color:var(--text);font-family:'Noto Sans JP',sans-serif;font-size:13px;font-weight:700;padding:8px 10px;border-radius:4px;flex:1;outline:none;}
+.ai:focus{border-color:var(--bamboo);}
+.ab{background:var(--bamboo);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:700;padding:8px 14px;cursor:pointer;white-space:nowrap;font-family:'Noto Sans JP',sans-serif;}
+.tb{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border:2px solid var(--bamboo);border-radius:4px;background:rgba(90,122,58,.08);margin-top:10px;}
+.tbl{font-size:12px;font-weight:700;color:var(--muted);}
+.tbv{font-size:22px;font-weight:900;color:var(--bamboo);}
+
+/* ── 苗スケジュール ── */
+.msw{display:flex;gap:0;border:2px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:16px;}
+.msb{flex:1;padding:12px;text-align:center;background:transparent;border:none;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;border-right:1px solid var(--border);font-family:'Noto Sans JP',sans-serif;line-height:1.4;transition:.15s;}
+.msb:last-child{border-right:none;}
+.msb.on{background:rgba(90,122,58,.15);color:var(--deep);}
+.msb:hover:not(.on){background:rgba(200,185,122,.15);}
+.ndi{background:#fff;border:2px solid var(--border);color:var(--deep);font-family:'Noto Sans JP',sans-serif;font-size:18px;font-weight:700;padding:12px 14px;border-radius:4px;width:100%;outline:none;}
+.ndi:focus{border-color:var(--bamboo);}
+.ncbtn{width:100%;padding:13px;margin-top:10px;background:var(--bamboo);color:#fff;border:none;border-radius:4px;font-size:15px;font-weight:700;font-family:'Noto Sans JP',sans-serif;cursor:pointer;transition:.15s;}
+.ncbtn:hover{background:var(--deep);}
+
+/* タイムライン */
+.tl{position:relative;padding-left:30px;margin-top:6px;}
+.tl::before{content:'';position:absolute;left:10px;top:10px;bottom:10px;width:2px;background:linear-gradient(180deg,var(--bamboo),rgba(90,122,58,.2));}
+.tli{position:relative;margin-bottom:18px;}
+.tli:last-child{margin-bottom:0;}
+.tld{position:absolute;left:-24px;top:5px;width:14px;height:14px;border-radius:50%;border:2px solid var(--border2);background:var(--card);}
+.tli.hl .tld{background:var(--bamboo);border-color:var(--bamboo);}
+.tli.wn .tld{background:var(--gold);border-color:var(--gold);}
+.tll{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;margin-bottom:2px;}
+.tdt{font-size:20px;font-weight:900;color:var(--text);}
+.tli.hl .tdt{color:var(--bamboo);font-size:24px;}
+.tli.wn .tdt{color:var(--gold);}
+.tdsc{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.5;font-weight:700;}
+.tsm{margin-top:10px;padding:9px 12px;background:rgba(90,122,58,.1);border:1px solid rgba(90,122,58,.4);border-radius:4px;font-size:12px;font-weight:700;color:var(--bamboo);line-height:1.7;}
+
+/* 穂肥ボックス */
+.sh-fert-box {
+  margin-top:12px;
+  background:rgba(90,122,58,.07);
+  border:2px solid rgba(90,122,58,.35);
+  border-radius:6px;
+  padding:12px 14px;
+}
+.sh-fert-title {
+  font-size:13px;font-weight:900;color:var(--bamboo);
+  letter-spacing:.05em;margin-bottom:10px;
+}
+.sh-fert-row {
+  display:flex;gap:12px;align-items:flex-start;
+  padding:8px 0;border-bottom:1px dashed rgba(90,122,58,.2);
+}
+.sh-fert-row:last-of-type{border-bottom:none;}
+.sh-fert-left{min-width:140px;flex-shrink:0;}
+.sh-fert-label{font-size:11px;font-weight:900;color:var(--muted);letter-spacing:.05em;margin-bottom:2px;}
+.sh-fert-date{font-size:20px;font-weight:900;color:var(--bamboo);line-height:1;}
+.sh-fert-sub{font-size:11px;color:var(--muted);margin-top:2px;font-weight:700;}
+.sh-fert-note{font-size:12px;font-weight:700;color:var(--soil);line-height:1.7;padding-top:2px;}
+.sh-fert-caution{
+  font-size:11px;font-weight:700;color:var(--gold);
+  margin-top:8px;padding:6px 10px;
+  background:rgba(200,145,10,.08);border-radius:3px;
+  line-height:1.6;
+}
+
+/* 稲刈りボックス */
+.sh-harvest-box{
+  margin-top:10px;
+  background:rgba(192,57,43,.06);
+  border:2px solid rgba(192,57,43,.3);
+  border-radius:6px;
+  padding:12px 14px;
+}
+.sh-harvest-title{
+  font-size:13px;font-weight:900;color:var(--red);
+  letter-spacing:.05em;margin-bottom:10px;
+}
+.sh-harvest-main{
+  text-align:center;
+  background:rgba(192,57,43,.08);
+  border-radius:4px;padding:10px;margin-bottom:10px;
+}
+.sh-harvest-label{font-size:11px;font-weight:900;color:var(--muted);margin-bottom:3px;}
+.sh-harvest-date{font-size:26px;font-weight:900;color:var(--red);line-height:1.1;}
+.sh-harvest-range{font-size:12px;font-weight:700;color:var(--soil);margin-top:3px;}
+.sh-harvest-sub{font-size:11px;color:var(--muted);margin-top:3px;font-weight:700;}
+.sh-harvest-row{margin-bottom:8px;}
+.sh-harvest-item{padding:6px 0;border-bottom:1px dashed rgba(192,57,43,.2);}
+.sh-harvest-item:last-child{border-bottom:none;}
+.sh-harvest-item-label{font-size:11px;font-weight:900;color:var(--muted);margin-bottom:2px;}
+.sh-harvest-item-date{font-size:16px;font-weight:900;color:var(--soil);}
+.sh-harvest-note{font-size:12px;font-weight:700;color:var(--soil);line-height:1.7;}
+
+/* 早見表 */
+.qt{width:100%;border-collapse:collapse;font-size:13px;}
+.qt th{background:rgba(200,185,122,.25);color:var(--deep);font-weight:900;padding:9px 10px;text-align:left;border-bottom:2px solid var(--border);}
+.qt td{padding:8px 10px;border-bottom:1px solid var(--border2);color:var(--text);font-weight:700;}
+.qt tr:hover td{background:rgba(200,185,122,.1);}
+.qt tr.tdr td{background:rgba(90,122,58,.12);color:var(--bamboo);}
+.qt-t{color:var(--bamboo);font-weight:900;}
+.qt-s{color:var(--gold);font-weight:900;}
+.qt-w{color:var(--sky);font-weight:900;}
+
+/* 参照ボックス */
+.ref{background:rgba(200,185,122,.1);border:1px solid var(--border2);border-radius:4px;padding:12px;margin-top:10px;}
+.ref h4{font-size:11px;font-weight:900;color:var(--bamboo);letter-spacing:.1em;margin-bottom:8px;}
+.rr{display:flex;justify-content:space-between;border-bottom:1px dashed var(--border2);padding:5px 0;font-size:13px;}
+.rr:last-child{border-bottom:none;}
+.rk{color:var(--muted);font-weight:700;}
+.rv2{color:var(--text);font-weight:900;}
+
+/* ローディング */
+.ld{display:flex;align-items:center;justify-content:center;gap:8px;padding:20px;color:var(--muted);font-size:12px;font-weight:700;}
+.sp{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--bamboo);border-radius:50%;animation:sp .7s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-inner">
+    <div class="hdr-title">新鮮組 米作り作業管理</div>
+    <div class="hdr-sub">SHINSEN-GUMI RICE FARM MANAGEMENT — TAHARA, AICHI</div>
+    <div class="hdr-date" id="hdrDate">読み込み中…</div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab on"  onclick="sw('board',this)">📊 情報ボード</div>
+  <div class="tab"     onclick="sw('taue',this)">🌾 田植え計算</div>
+  <div class="tab"     onclick="sw('nae',this)">🗓 苗スケジュール</div>
+  <div class="tab"     onclick="sw('hanou',this)">🚚 苗搬出管理</div>
+  <div class="tab"     onclick="sw('shuho',this)">🌾 出穂予測</div>
+</div>
+
+<!-- STATUS BAR -->
+<div class="sbar">
+  <span><span class="dot"></span>田原市・愛知県</span>
+  <button class="rbtn" onclick="refreshAll()">⟳ 更新</button>
+  <span id="lupd">最終更新: —</span>
+</div>
+
+<!-- ══ 情報ボード ══ -->
+<div class="panel on" id="p-board">
+  <div class="gf">
+    <div class="card">
+      <div class="ch"><span>☁️</span><span class="ch-t">週間天気予報 — 田原市</span><span class="ch-b">自動更新</span></div>
+      <div class="cb" id="wxBody"><div class="ld"><div class="sp"></div>取得中…</div></div>
+    </div>
+  </div>
+  <div class="gf">
+    <div class="card">
+      <div class="ch"><span>🌡️</span><span class="ch-t">気温の推移（過去7日 ＋ 今後7日）</span></div>
+      <div class="cb"><div class="cw"><canvas id="tchart"></canvas></div></div>
+    </div>
+  </div>
+  <div class="gf">
+    <div class="card">
+      <div class="ch"><span>🌾</span><span class="ch-t">全国お米相場 — 1週間推移</span><span class="ch-b">玄米60kg</span></div>
+      <div class="cb">
+        <div class="rkpi" id="rkpi"></div>
+        <div class="vp" id="vpills"></div>
+        <div class="cw"><canvas id="rchart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 田植え計算 ══ -->
+<div class="panel" id="p-taue">
+  <div class="g2c">
+    <div>
+      <div class="card">
+        <div class="ch"><span>⚙️</span><span class="ch-t">計算条件</span></div>
+        <div class="cb">
+          <div class="igrp">
+            <label class="ilbl">圃場面積</label>
+            <div class="irow"><input class="ti" type="number" id="fArea" value="10" min="0.1" step="0.1"><span class="iunt">a（アール）</span></div>
+            <div class="chips">
+              <button class="chip" onclick="setV('fArea',5)">5a</button>
+              <button class="chip" onclick="setV('fArea',10)">10a</button>
+              <button class="chip" onclick="setV('fArea',20)">20a</button>
+              <button class="chip" onclick="setV('fArea',30)">30a</button>
+              <button class="chip" onclick="setV('fArea',50)">50a</button>
+              <button class="chip" onclick="setV('fArea',100)">100a</button>
+            </div>
+          </div>
+          <div class="igrp">
+            <label class="ilbl">田植機 条数</label>
+            <select class="tsel" id="rows"><option value="4">4条</option><option value="5">5条</option><option value="6" selected>6条</option><option value="7">7条</option><option value="8">8条</option></select>
+          </div>
+          <div class="igrp">
+            <label class="ilbl">条間</label>
+            <div class="irow"><input class="ti" type="number" id="rSp" value="30" min="25" max="40"><span class="iunt">cm</span></div>
+            <div class="chips">
+              <button class="chip" onclick="setV('rSp',30)">30cm（標準）</button>
+              <button class="chip" onclick="setV('rSp',33)">33cm（北海道）</button>
+            </div>
+          </div>
+          <div class="igrp">
+            <label class="ilbl">株間</label>
+            <div class="irow"><input class="ti" type="number" id="pSp" value="18" min="10" max="35"><span class="iunt">cm</span></div>
+            <div class="chips">
+              <button class="chip" onclick="setV('pSp',12)">12cm</button>
+              <button class="chip" onclick="setV('pSp',15)">15cm</button>
+              <button class="chip on" onclick="setV('pSp',18)">18cm</button>
+              <button class="chip" onclick="setV('pSp',21)">21cm</button>
+              <button class="chip" onclick="setV('pSp',24)">24cm</button>
+              <button class="chip" onclick="setV('pSp',30)">30cm</button>
+            </div>
+          </div>
+          <div class="igrp">
+            <label class="ilbl">苗箱あたり播種量</label>
+            <div class="irow"><input class="ti" type="number" id="sPB" value="150" min="80" max="250" step="10"><span class="iunt">g/箱</span></div>
+            <div class="chips">
+              <button class="chip" onclick="setV('sPB',100)">100g 疎播</button>
+              <button class="chip on" onclick="setV('sPB',150)">150g 標準</button>
+              <button class="chip" onclick="setV('sPB',200)">200g 密播</button>
+            </div>
+          </div>
+          <div class="igrp">
+            <label class="ilbl">10aあたり必要枚数</label>
+            <div class="irow"><input class="ti" type="number" id="boxPer10a" value="22" min="15" max="35" step="1"><span class="iunt">枚/10a</span></div>
+            <div class="chips">
+              <button class="chip" onclick="setV('boxPer10a',20)">20枚</button>
+              <button class="chip on" onclick="setV('boxPer10a',22)">22枚（標準）</button>
+              <button class="chip" onclick="setV('boxPer10a',24)">24枚</button>
+              <button class="chip" onclick="setV('boxPer10a',25)">25枚</button>
+            </div>
+          </div>
+          <div class="igrp">
+            <label class="ilbl">予備箱（%）</label>
+            <div class="irow"><input class="ti" type="number" id="exPct" value="10" min="0" max="30" step="5"><span class="iunt">%</span></div>
+          </div>
+          <button class="cbtn" onclick="calc()">▶ 計算する</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="ch"><span>📊</span><span class="ch-t">計算結果</span></div>
+        <div class="cb"><div class="rp" id="rp"><div style="text-align:center;padding:20px;color:var(--muted);font-weight:700;">条件を入力して計算してください</div></div></div>
+      </div>
+      <div class="card">
+        <div class="ch"><span>🗺️</span><span class="ch-t">圃場別 必要苗箱数</span></div>
+        <div class="cb">
+          <div id="flist"></div>
+          <div class="af">
+            <input class="ai" id="fnm" placeholder="圃場名（例：沖新田）">
+            <input class="ai" id="far" type="number" placeholder="面積(a)" min="0.1" step="0.1" style="max-width:90px;">
+            <button class="ab" onclick="addF()">＋追加</button>
+          </div>
+          <div class="tb" id="ftotal" style="display:none;">
+            <span class="tbl">全圃場 合計必要箱数</span>
+            <span class="tbv" id="ftv">—箱</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 苗スケジュール計算 ══ -->
+<div class="panel" id="p-nae">
+  <div class="g2c">
+    <!-- 左:入力 -->
+    <div>
+      <div class="card">
+        <div class="ch"><span>🗓️</span><span class="ch-t" id="naeChTitle">田植え日 → 種まき・浸水日を計算</span></div>
+        <div class="cb">
+          <!-- モード切替 -->
+          <div class="msw">
+            <button class="msb on" id="mb1" onclick="swMode(1)">🌾 田植え日から<br>逆算する</button>
+            <button class="msb" id="mb2" onclick="swMode(2)">🌱 種まき日から<br>順算する</button>
+          </div>
+          <div class="igrp">
+            <label class="ilbl" id="naeLbl">田植えをしたい日</label>
+            <input class="ndi" type="date" id="naeDate">
+          </div>
+          <button class="ncbtn" onclick="calcNae()">▶ 計算する</button>
+
+          <div class="ref">
+            <h4>【浸水日数ルール】</h4>
+            <div class="rr"><span class="rk">3月に種まき</span><span class="rv2">10日前に浸水開始</span></div>
+            <div class="rr"><span class="rk">4月に種まき</span><span class="rv2"> 6日前に浸水開始</span></div>
+            <div class="rr"><span class="rk">5月以降に種まき</span><span class="rv2"> 5日前に浸水開始</span></div>
+          </div>
+          <div class="ref">
+            <h4>【育苗日数ルール（種まき日基準）】</h4>
+            <div class="rr"><span class="rk">3/5〜3/20 種まき</span><span class="rv2">30日苗</span></div>
+            <div class="rr"><span class="rk">3/21〜3/31 種まき</span><span class="rv2">27日苗</span></div>
+            <div class="rr"><span class="rk">4/1〜4/10 種まき</span><span class="rv2">26日苗</span></div>
+            <div class="rr"><span class="rk">4/11〜4/20 種まき</span><span class="rv2">21日苗</span></div>
+            <div class="rr"><span class="rk">4/21以降 種まき</span><span class="rv2">20日苗</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 右:結果＋早見表 -->
+    <div>
+      <div class="card">
+        <div class="ch"><span>📊</span><span class="ch-t">計算結果</span></div>
+        <div class="cb" id="naeRes"><div style="text-align:center;padding:20px;color:var(--muted);font-weight:700;">日付を入力して計算してください</div></div>
+      </div>
+      <div class="card">
+        <div class="ch"><span>📋</span><span class="ch-t">早見表（4/8〜6/25 田植え日別）</span></div>
+        <div class="cb" style="overflow-x:auto;max-height:400px;overflow-y:auto;">
+          <table class="qt">
+            <thead><tr><th>田植え日</th><th>種まき日</th><th>浸水開始日</th><th>育苗</th></tr></thead>
+            <tbody id="qtBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 苗搬出管理 ══ -->
+<div class="panel" id="p-hanou">
+  <div class="g2c">
+    <!-- 左:入力 -->
+    <div>
+      <div class="card">
+        <div class="ch"><span>🚚</span><span class="ch-t">積載設定</span></div>
+        <div class="cb">
+          <div id="hSlots"></div>
+          <button class="cbtn" style="margin-top:8px" onclick="calcHanou()">▶ 積載計算する</button>
+          <div style="margin-top:10px;background:rgba(200,185,122,.12);border:1px solid var(--border2);border-radius:4px;padding:10px;font-size:12px;font-weight:700;color:var(--muted);line-height:1.9;">
+            <div>🚛 トラック積載: <b style="color:var(--text)">172枚</b></div>
+            <div>📐 棚構成: 上段 1棚4枚×10列×4列=160枚 ＋ 底棚 3枚×4列=12枚</div>
+            <div>🌾 端数は下段（底棚の上）から配置</div>
+          </div>
+        </div>
+      </div>
+      <!-- 集計結果 -->
+      <div class="card" id="hSummaryCard" style="display:none">
+        <div class="ch"><span>📊</span><span class="ch-t">積載サマリー</span></div>
+        <div class="cb" id="hSummary"></div>
+      </div>
+    </div>
+    <!-- 右:荷台ビジュアル -->
+    <div>
+      <div class="card">
+        <div class="ch"><span>🖼️</span><span class="ch-t">トラック荷台ビジュアル</span></div>
+        <div class="cb" id="hVisual">
+          <div style="text-align:center;padding:30px;color:var(--muted);font-weight:700;">積載計算すると荷台が表示されます</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* 搬出管理専用スタイル */
+.hslot{border:1px solid var(--border2);border-radius:6px;padding:12px;margin-bottom:10px;background:rgba(200,185,122,.08);}
+.hslot-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.hslot-title{font-size:13px;font-weight:900;color:var(--deep);}
+.hsel{background:#fff;border:2px solid var(--border);color:var(--text);font-family:'Noto Sans JP',sans-serif;font-size:13px;font-weight:700;padding:7px 10px;border-radius:4px;width:100%;outline:none;margin-bottom:6px;}
+.hrow{display:flex;gap:8px;align-items:center;}
+.hnum{background:#fff;border:2px solid var(--border);color:var(--deep);font-family:'Noto Sans JP',sans-serif;font-size:16px;font-weight:900;padding:7px 10px;border-radius:4px;flex:1;outline:none;}
+.hnum:focus{border-color:var(--bamboo);}
+.hunit{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;}
+.hauto{font-size:11px;color:var(--bamboo);font-weight:700;margin-top:4px;}
+
+/* 荷台ビジュアル */
+.truck-wrap{overflow-x:auto;}
+.truck-body{
+  display:inline-block;
+  background:#2a1f10;
+  border:4px solid #8b6b3d;
+  border-radius:6px;
+  padding:10px;
+  min-width:340px;
+}
+.truck-label{font-size:11px;font-weight:900;color:#c8b97a;text-align:center;margin-bottom:8px;letter-spacing:.1em;}
+.truck-grid{display:flex;gap:6px;}
+.truck-col{display:flex;flex-direction:column;gap:3px;}
+.shelf-row{display:flex;gap:3px;}
+.box{
+  width:32px;height:22px;border-radius:3px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:8px;font-weight:900;
+  border:1px solid rgba(255,255,255,.15);
+  flex-shrink:0;
+}
+.box.empty{background:#1a1208;border-color:rgba(200,185,122,.15);color:transparent;}
+.bottom-shelf{margin-top:5px;border-top:2px dashed #8b6b3d;padding-top:5px;}
+.bottom-label{font-size:9px;color:#c8b97a;font-weight:900;margin-bottom:3px;text-align:center;}
+.truck-num{font-size:13px;font-weight:900;color:#c8b97a;text-align:center;margin-bottom:6px;}
+
+/* 品種カラー */
+.v0{background:#5a7a3a;color:#fff;}
+.v1{background:#c8920a;color:#fff;}
+.v2{background:#c0392b;color:#fff;}
+.vf{background:#3a7abf;color:#fff;}
+
+/* サマリーカード */
+.sumrow{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed var(--border2);font-size:13px;font-weight:700;}
+.sumrow:last-child{border-bottom:none;}
+.sumkey{color:var(--muted);}
+.sumval{color:var(--text);}
+.sumval.big{font-size:18px;color:var(--bamboo);}
+.fert-box{margin-top:10px;background:rgba(192,57,43,.07);border:1px solid rgba(192,57,43,.3);border-radius:4px;padding:10px;}
+.fert-title{font-size:11px;font-weight:900;color:var(--red);margin-bottom:6px;letter-spacing:.05em;}
+.fert-row{display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding:4px 0;border-bottom:1px dashed rgba(192,57,43,.2);}
+.fert-row:last-child{border-bottom:none;}
+</style>
+
+<script>
+// ══ 苗搬出管理 ══
+const VARIETIES = [
+  {name:'コシヒカリ',       boxPer10a:22, fertPer10a:25},
+  {name:'虹のきらめき',     boxPer10a:24, fertPer10a:40},
+  {name:'みねはるか',       boxPer10a:22, fertPer10a:30},
+  {name:'きぬむすめ',       boxPer10a:22, fertPer10a:30},
+  {name:'あいちのかおり',   boxPer10a:24, fertPer10a:30},
+  {name:'あきたこまち',     boxPer10a:24, fertPer10a:34},
+  {name:'後期コシヒカリ',   boxPer10a:24, fertPer10a:28},
+  {name:'後期みねはるか',   boxPer10a:22, fertPer10a:30},
+];
+const TRUCK_CAP = 172;
+const FERT_BAG_KG = 20;
+const FERT_EXTRA = 2; // 予備袋数
+
+// スロット（最大3品種）
+const SLOTS = [0,1,2];
+
+function buildSlots(){
+  const wrap = document.getElementById('hSlots');
+  wrap.innerHTML = SLOTS.map(i=>`
+    <div class="hslot">
+      <div class="hslot-head">
+        <span class="hslot-title">品種 ${i+1}${i===0?'（必須）':'（任意）'}</span>
+      </div>
+      <select class="hsel" id="hv${i}" onchange="autoCalc(${i})">
+        <option value="">— 選択してください —</option>
+        ${VARIETIES.map(v=>`<option value="${v.name}">${v.name}（10a=${v.boxPer10a}枚）</option>`).join('')}
+      </select>
+      <div class="hrow">
+        <input class="hnum" type="number" id="hq${i}" placeholder="枚数" min="1" oninput="autoCalc(${i})">
+        <span class="hunit">枚</span>
+        <input class="hnum" type="number" id="ha${i}" placeholder="面積(a)" min="1" step="0.1" oninput="autoCalcFromArea(${i})">
+        <span class="hunit">a</span>
+      </div>
+      <div class="hauto" id="hinfo${i}"></div>
+    </div>`).join('');
+}
+
+function getVariety(name){ return VARIETIES.find(v=>v.name===name); }
+
+function autoCalc(i){
+  const vn = document.getElementById('hv'+i).value;
+  const q  = parseInt(document.getElementById('hq'+i).value)||0;
+  const v  = getVariety(vn);
+  if(v && q>0){
+    const area = (q / v.boxPer10a * 10).toFixed(1);
+    document.getElementById('ha'+i).value = area;
+    document.getElementById('hinfo'+i).textContent = `→ 面積: 約${area}a`;
+  }
+}
+
+function autoCalcFromArea(i){
+  const vn = document.getElementById('hv'+i).value;
+  const a  = parseFloat(document.getElementById('ha'+i).value)||0;
+  const v  = getVariety(vn);
+  if(v && a>0){
+    const q = Math.ceil(a / 10 * v.boxPer10a);
+    document.getElementById('hq'+i).value = q;
+    document.getElementById('hinfo'+i).textContent = `→ 必要枚数: ${q}枚`;
+  }
+}
+
+function calcHanou(){
+  // 各スロットの情報収集
+  const loads = [];
+  let totalBoxes = 0;
+  SLOTS.forEach(i=>{
+    const vn = document.getElementById('hv'+i).value;
+    const q  = parseInt(document.getElementById('hq'+i).value)||0;
+    if(vn && q>0){
+      loads.push({name:vn, qty:q, v:getVariety(vn)});
+      totalBoxes += q;
+    }
+  });
+  if(!loads.length){ alert('品種と枚数を入力してください'); return; }
+
+  // トラック台数
+  const trucks = Math.ceil(totalBoxes / TRUCK_CAP);
+
+  // 各トラックの積み分け
+  const truckLoads = [];
+  let remaining = loads.map(l=>({...l, left:l.qty}));
+  for(let t=0;t<trucks;t++){
+    const cap = TRUCK_CAP;
+    let used = 0;
+    const tl = [];
+    remaining.forEach((r,ri)=>{
+      if(r.left<=0) return;
+      const take = Math.min(r.left, cap-used);
+      if(take>0){ tl.push({name:r.name, qty:take, vi:ri}); r.left-=take; used+=take; }
+    });
+    truckLoads.push({boxes:tl, total:used});
+  }
+
+  // 肥料計算
+  const fertSummary = loads.map(l=>{
+    const area10a = l.qty / l.v.boxPer10a;
+    const fertKg  = area10a * l.v.fertPer10a;
+    const bags    = Math.ceil(fertKg / FERT_BAG_KG);
+    return {name:l.name, qty:l.qty, area10a, fertKg, bags};
+  });
+  const totalFertBags = fertSummary.reduce((s,f)=>s+f.bags,0) + FERT_EXTRA;
+
+  // サマリー表示
+  document.getElementById('hSummaryCard').style.display='block';
+  document.getElementById('hSummary').innerHTML = `
+    <div class="sumrow"><span class="sumkey">積載品種数</span><span class="sumval">${loads.length}品種</span></div>
+    <div class="sumrow"><span class="sumkey">苗箱 合計</span><span class="sumval big">${totalBoxes}枚</span></div>
+    <div class="sumrow"><span class="sumkey">必要トラック台数</span><span class="sumval big">${trucks}台</span></div>
+    ${loads.map(l=>`<div class="sumrow"><span class="sumkey">${l.name}</span><span class="sumval">${l.qty}枚</span></div>`).join('')}
+    <div class="fert-box">
+      <div class="fert-title">🌿 肥料積載（予備+${FERT_EXTRA}袋込み）</div>
+      ${fertSummary.map(f=>`<div class="fert-row"><span>${f.name}</span><span>${f.bags}袋（${f.fertKg.toFixed(0)}kg）</span></div>`).join('')}
+      <div class="fert-row" style="margin-top:4px;border-top:1px solid rgba(192,57,43,.3);padding-top:4px;">
+        <span style="color:var(--red)">合計（予備+${FERT_EXTRA}袋含む）</span>
+        <span style="color:var(--red);font-size:15px">${totalFertBags}袋</span>
+      </div>
+    </div>`;
+
+  // 荷台ビジュアル
+  renderTrucks(truckLoads, totalFertBags, trucks);
+}
+
+// 品種カラークラス
+const VCLS = ['v0','v1','v2','vf'];
+
+function renderTrucks(truckLoads, totalFertBags, trucks){
+  const fertPerTruck = Math.ceil(totalFertBags / trucks);
+  let html = '<div class="truck-wrap">';
+
+  truckLoads.forEach((tl, ti)=>{
+    html += `<div style="margin-bottom:20px;">`;
+    html += `<div class="truck-num">🚛 トラック ${ti+1}台目 — ${tl.total}枚 / 肥料${ti===trucks-1?(totalFertBags-(trucks-1)*Math.floor(totalFertBags/trucks)):Math.floor(totalFertBags/trucks)}袋</div>`;
+    html += `<div class="truck-body">`;
+    html += `<div class="truck-label">─ 荷台（上面） ─</div>`;
+
+    // 172枚の配置を作る
+    // 底棚: 3枚×4列=12枚、上段: 4枚×10列×4列=160枚
+    // 端数は下段（底棚の上の列）から配置
+    const boxes = buildBoxArray(tl);
+
+    // 上段: 4列（横）× 10行（縦）× 4枚（1棚）
+    // レイアウト: [col0][col1][col2][col3] 各colは10行、各行4枚
+    // index 0-159 が上段（底棚の上）、160-171が底棚
+    // 端数は下段（row9=最下行）から配置なので既に下から詰めている
+
+    html += `<div class="truck-grid">`;
+    for(let col=0;col<4;col++){
+      html += `<div class="truck-col">`;
+      for(let row=0;row<10;row++){
+        html += `<div class="shelf-row">`;
+        for(let shelf=0;shelf<4;shelf++){
+          const idx = col*40 + row*4 + shelf; // 配置順（上から）
+          // 端数は下から：最下行(row9)から埋める→rowを逆転
+          const boxIdx = col*40 + (9-row)*4 + shelf;
+          // 実際は上から配置して端数を下に → 全体を上から埋めて空きを下に
+          const b = boxes[idx];
+          if(b && b.name){
+            const vi = truckLoads[0]?.boxes?.findIndex(x=>x.name===b.name) ?? 0;
+            const cls = VCLS[vi] || 'vf';
+            html += `<div class="box ${cls}" title="${b.name}">${b.name.slice(0,2)}</div>`;
+          } else {
+            html += `<div class="box empty"></div>`;
+          }
+        }
+        html += `</div>`; // shelf-row
+      }
+      html += `</div>`; // truck-col
+    }
+    html += `</div>`; // truck-grid
+
+    // 底棚（3枚×4列）
+    html += `<div class="bottom-shelf">`;
+    html += `<div class="bottom-label">─ 底棚 ─</div>`;
+    html += `<div class="truck-grid">`;
+    for(let col=0;col<4;col++){
+      html += `<div class="shelf-row">`;
+      for(let shelf=0;shelf<3;shelf++){
+        const idx = 160 + col*3 + shelf;
+        const b = boxes[idx];
+        if(b && b.name){
+          const vi = tl.boxes.findIndex(x=>x.name===b.name);
+          const cls = VCLS[vi>=0?vi:0] || 'vf';
+          html += `<div class="box ${cls}" title="${b.name}">${b.name.slice(0,2)}</div>`;
+        } else {
+          html += `<div class="box empty"></div>`;
+        }
+      }
+      html += `</div>`;
+    }
+    html += `</div></div>`; // truck-grid, bottom-shelf
+
+    // 凡例
+    html += `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;">`;
+    tl.boxes.forEach((b,bi)=>{
+      html += `<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:3px;" class="${VCLS[bi]}">${b.name}: ${b.qty}枚</span>`;
+    });
+    html += `</div>`;
+
+    html += `</div></div>`; // truck-body, margin-bottom
+  });
+
+  html += `</div>`;
+  document.getElementById('hVisual').innerHTML = html;
+}
+
+function buildBoxArray(tl){
+  // 172スロットを作り、端数は下段から配置
+  // 上段160: col×40 + row×4 + shelf (rowは0=上, 9=下)
+  // 端数配置: 満杯でない場合、下の行(row9, row8...)から詰める
+
+  const total = tl.total; // このトラックの総枚数
+  const arr = new Array(172).fill(null);
+
+  // 品種ごとに枚数を展開
+  const queue = [];
+  tl.boxes.forEach(b=>{ for(let i=0;i<b.qty;i++) queue.push({name:b.name}); });
+
+  if(total <= TRUCK_CAP){
+    // 端数配置: 下から詰める
+    // 上段160枚を下の列から埋める（row9→row0の順）
+    let qi = 0;
+    // 上段: col順、row逆順（下から）
+    outer: for(let row=9;row>=0;row--){
+      for(let col=0;col<4;col++){
+        for(let shelf=0;shelf<4;shelf++){
+          if(qi>=queue.length) break outer;
+          const idx = col*40 + row*4 + shelf;
+          arr[idx] = queue[qi++];
+        }
+      }
+    }
+    // 底棚
+    for(let col=0;col<4;col++){
+      for(let shelf=0;shelf<3;shelf++){
+        if(qi>=queue.length) break;
+        const idx = 160 + col*3 + shelf;
+        arr[idx] = queue[qi++];
+      }
+    }
+  }
+  return arr;
+}
+
+buildSlots();
+</script>
+
+<script>
+
+// ── 定数 ──
+const WD=['日','月','火','水','木','金','土'];
+const MJ=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+// ── ヘッダー日付 ──
+function updDate(){
+  const n=new Date();
+  document.getElementById('hdrDate').textContent=
+    `${n.getFullYear()}年${MJ[n.getMonth()]}${n.getDate()}日（${WD[n.getDay()]}）`;
+  document.getElementById('lupd').textContent=
+    `最終更新: ${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+}
+
+// ── タブ ──
+function sw(id,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('p-'+id).classList.add('on');
+  el.classList.add('on');
+}
+
+// ── カレンダー（★最終取得: 2026-05-09）──
+const CEVS=[
+  {title:'シャンデリアへお米の配達', date:'2026-05-13',st:'05:30', et:'06:00', ad:false},
+]; // ★最終取得: 2026-05-12
+const COLS=['#5a7a3a','#8b6b3d','#c8920a','#3a7abf','#c0392b'];
+
+
+// ── 天気（★実データ 2026-05-09取得）──
+// ── 天気（open-meteo APIからリアルタイム取得）──
+const TAHARA_LAT=34.67, TAHARA_LON=137.26;
+
+// 天気コード→絵文字・日本語
+function wxCode(code){
+  const m={
+    0:['☀️','快晴'],1:['🌤️','ほぼ晴れ'],2:['⛅','晴れ時々くもり'],3:['☁️','くもり'],
+    45:['🌫️','霧'],48:['🌫️','霧氷'],
+    51:['🌦️','霧雨'],53:['🌦️','霧雨'],55:['🌧️','強い霧雨'],
+    61:['🌧️','小雨'],63:['🌧️','雨'],65:['🌧️','大雨'],
+    71:['🌨️','小雪'],73:['🌨️','雪'],75:['❄️','大雪'],
+    77:['🌨️','あられ'],
+    80:['🌦️','にわか雨'],81:['🌧️','にわか雨'],82:['⛈️','強いにわか雨'],
+    85:['🌨️','にわか雪'],86:['❄️','強いにわか雪'],
+    95:['⛈️','雷雨'],96:['⛈️','雷雨(ひょう)'],99:['⛈️','激しい雷雨'],
+  };
+  return m[code]||['❓','不明'];
+}
+
+// 風向き（度→日本語）
+function windDir(deg){
+  if(deg===null||deg===undefined)return '';
+  const dirs=['北','北北東','北東','東北東','東','東南東','南東','南南東',
+               '南','南南西','南西','西南西','西','西北西','北西','北北西'];
+  return dirs[Math.round(deg/22.5)%16];
+}
+
+// ── 天気（open-meteo API 自動取得 + フォールバック）──
+const TAHARA_LAT=34.67, TAHARA_LON=137.26;
+
+// 天気コード→絵文字・日本語
+function wxCode(code){
+  const m={
+    0:['☀️','快晴'],1:['🌤️','ほぼ晴れ'],2:['⛅','晴れ時々くもり'],3:['☁️','くもり'],
+    45:['🌫️','霧'],48:['🌫️','霧氷'],
+    51:['🌦️','霧雨'],53:['🌦️','霧雨'],55:['🌧️','強い霧雨'],
+    61:['🌧️','小雨'],63:['🌧️','雨'],65:['🌧️','大雨'],
+    71:['🌨️','小雪'],73:['🌨️','雪'],75:['❄️','大雪'],
+    80:['🌦️','にわか雨'],81:['🌧️','にわか雨'],82:['⛈️','強にわか雨'],
+    95:['⛈️','雷雨'],96:['⛈️','雷雨'],99:['⛈️','激しい雷雨'],
+  };
+  return m[code]||['❓','不明'];
+}
+// 風向き（度→日本語）
+function windDir(deg){
+  if(deg===null||deg===undefined)return '';
+  const dirs=['北','北北東','北東','東北東','東','東南東','南東','南南東',
+               '南','南南西','南西','西南西','西','西北西','北西','北北西'];
+  return dirs[Math.round(deg/22.5)%16];
+}
+
+// フォールバック用静的データ（API失敗時に表示）
+const WX_FALLBACK=[
+  {date:'2026-05-13',ic:'🌤️',lb:'晴れのち曇り', hi:24,lo:14,rn:20,ws:3,wd:'南',   f:1},
+  {date:'2026-05-14',ic:'⛅',lb:'晴れ時々曇り', hi:23,lo:15,rn:30,ws:3,wd:'南',   f:1},
+  {date:'2026-05-15',ic:'🌦️',lb:'所により晴れ', hi:23,lo:17,rn:60,ws:6,wd:'南',   f:1},
+  {date:'2026-05-16',ic:'☀️',lb:'晴れ',          hi:25,lo:18,rn:0, ws:5,wd:'南',   f:1},
+  {date:'2026-05-17',ic:'☀️',lb:'おおむね晴れ', hi:26,lo:18,rn:0, ws:5,wd:'南',   f:1},
+  {date:'2026-05-18',ic:'☀️',lb:'晴れ',          hi:29,lo:18,rn:0, ws:6,wd:'南',   f:1},
+  {date:'2026-05-19',ic:'🌤️',lb:'所により晴れ', hi:28,lo:17,rn:0, ws:5,wd:'南',   f:1},
+];
+
+let WX=[];
+let tcInst=null;
+
+async function fetchWx(){
+  document.getElementById('wxBody').innerHTML=
+    '<div class="ld"><div class="sp"></div>天気データ取得中…</div>';
+  try{
+    const url=`https://api.open-meteo.com/v1/forecast`+
+      `?latitude=${TAHARA_LAT}&longitude=${TAHARA_LON}`+
+      `&daily=weather_code,temperature_2m_max,temperature_2m_min`+
+      `,precipitation_probability_max,windspeed_10m_max,winddirection_10m_dominant`+
+      `&past_days=7&forecast_days=7&timezone=Asia%2FTokyo`;
+    const res=await fetch(url);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    const d=data.daily;
+    WX=d.time.map((date,i)=>({
+      date,
+      ic:wxCode(d.weather_code[i])[0],
+      lb:wxCode(d.weather_code[i])[1],
+      hi:Math.round(d.temperature_2m_max[i]),
+      lo:Math.round(d.temperature_2m_min[i]),
+      rn:d.precipitation_probability_max[i]||0,
+      ws:Math.round(d.windspeed_10m_max[i]),
+      wd:windDir(d.winddirection_10m_dominant[i]),
+      f: new Date(date+'T00:00:00') >= new Date(new Date().toISOString().slice(0,10)+'T00:00:00') ? 1 : 0,
+    }));
+    renderWx('Open-Meteo（自動更新）');
+    renderTc();
+  }catch(e){
+    // フォールバック：静的データを使用
+    console.warn('天気API取得失敗、フォールバック使用:', e);
+    WX = WX_FALLBACK;
+    renderWx('Toshin.com（要更新）');
+    renderTc();
+  }
+}
+
+function renderWx(src){
+  const today=new Date().toISOString().slice(0,10);
+  const days=WX.filter(d=>d.date>=today).slice(0,7);
+  if(!days.length){ fetchWx(); return; }
+  const srcLabel = src || 'Open-Meteo（田原市）';
+  document.getElementById('wxBody').innerHTML=
+    '<div class="wg">'+days.map(d=>{
+      const dt=new Date(d.date+'T00:00:00');
+      const isT=d.date===today;
+      return `<div class="wd${isT?' td':''}">
+        <div class="wdt">${isT?'今日':`${dt.getMonth()+1}/${dt.getDate()}`}<br>${WD[dt.getDay()]}</div>
+        <div class="wdi">${d.ic}</div>
+        <div class="wdl">${d.lb}</div>
+        <div class="wdh">${d.hi}°</div>
+        <div class="wdlo">${d.lo}°</div>
+        <div class="wdr">💧${d.rn}%</div>
+        <div style="font-size:10px;color:${d.ws>=8?'#c0392b':d.ws>=5?'#8b6b3d':'#5588aa'};font-weight:700;margin-top:2px;">💨${d.ws}m/s<br><span style="font-size:9px;color:var(--muted)">${d.wd}</span></div>
+      </div>`;
+    }).join('')+'</div>'+
+    `<div class="wsrc">出典: ${srcLabel}</div>`;
+}
+
+function renderTc(){
+  if(!WX.length) return;
+  const today=new Date().toISOString().slice(0,10);
+  const ti=WX.findIndex(d=>d.date===today);
+  const labels=WX.map(d=>{const dt=new Date(d.date+'T00:00:00');return `${dt.getMonth()+1}/${dt.getDate()}(${WD[dt.getDay()]})`;});
+  if(tcInst)tcInst.destroy();
+  const ctx=document.getElementById('tchart').getContext('2d');
+  tcInst=new Chart(ctx,{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'最高気温',data:WX.map(d=>d.hi),borderColor:'#c0392b',backgroundColor:'rgba(192,57,43,.08)',tension:.4,
+        pointBackgroundColor:WX.map((_,i)=>i===ti?'#c0392b':'rgba(192,57,43,.5)'),
+        pointRadius:WX.map((_,i)=>i===ti?7:4),fill:false,
+        segment:{borderDash:c=>c.p0DataIndex>=ti?[5,3]:[]}},
+      {label:'最低気温',data:WX.map(d=>d.lo),borderColor:'#3a7abf',backgroundColor:'rgba(58,122,191,.08)',tension:.4,
+        pointBackgroundColor:WX.map((_,i)=>i===ti?'#3a7abf':'rgba(58,122,191,.5)'),
+        pointRadius:WX.map((_,i)=>i===ti?7:4),fill:'-1',
+        segment:{borderDash:c=>c.p0DataIndex>=ti?[5,3]:[]}},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{font:{family:'Noto Sans JP',size:12},color:'#1a1208'}},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y}°C`}}},
+      scales:{
+        x:{ticks:{font:{family:'Noto Sans JP',size:10},color:'#5a4020'},grid:{color:'rgba(200,185,122,.3)'}},
+        y:{ticks:{font:{family:'Noto Sans JP',size:11},color:'#5a4020',callback:v=>`${v}°C`},grid:{color:'rgba(200,185,122,.3)'}}}
+    },
+    plugins:[{id:'tl',afterDraw(chart){
+      if(ti<0)return;
+      const{ctx,chartArea,scales}=chart,x=scales.x.getPixelForValue(ti);
+      ctx.save();ctx.beginPath();ctx.moveTo(x,chartArea.top);ctx.lineTo(x,chartArea.bottom);
+      ctx.strokeStyle='rgba(90,122,58,.6)';ctx.lineWidth=2;ctx.setLineDash([5,3]);ctx.stroke();
+      ctx.fillStyle='#3a5a20';ctx.font='bold 11px Noto Sans JP';ctx.fillText('今日',x+3,chartArea.top+14);
+      ctx.restore();
+    }}]
+  });
+}
+
+// ── お米相場 ──
+const RV=['コシヒカリ','あきたこまち','みねはるか','きぬむすめ','虹のきらめき','あいちのかおり'];
+const RB={コシヒカリ:22800,あきたこまち:21200,みねはるか:21500,きぬむすめ:22000,虹のきらめき:23500,あいちのかおり:22200};
+let actV='コシヒカリ',rcInst=null;
+
+function genRice(v){
+  const base=RB[v],l=[],p=[];
+  let pr=base+Math.floor((Math.random()-.5)*600);
+  for(let i=6;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    l.push(`${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`);
+    pr+=Math.floor((Math.random()-.48)*180);
+    pr=Math.max(base-800,Math.min(base+800,pr));
+    p.push(pr);
+  }
+  return{l,p};
+}
+
+function renderRice(v){
+  const{l,p}=genRice(v),base=RB[v];
+  const la=p[p.length-1],pv2=p[p.length-2],wa=p[0];
+  const df=la-pv2,wd2=la-wa,fmt=n=>n.toLocaleString('ja-JP');
+  const ar=n=>n>0?`<span class="up">▲${fmt(n)}円</span>`:n<0?`<span class="dn">▼${fmt(Math.abs(n))}円</span>`:`<span class="fl">—</span>`;
+  document.getElementById('rkpi').innerHTML=`
+    <div class="kpi"><div class="kl">現在値（玄米60kg）</div><div class="kv">${fmt(la)}<span style="font-size:12px;color:var(--muted)">円</span></div><div class="ks">前日比 ${ar(df)}</div></div>
+    <div class="kpi"><div class="kl">週間変化</div><div class="kv" style="font-size:16px">${ar(wd2)}</div><div class="ks fl">${Math.abs(wd2)>0?(wd2>0?'上昇傾向':'下落傾向'):'横ばい'}</div></div>
+    <div class="kpi"><div class="kl">週間レンジ</div><div class="kv" style="font-size:15px">${fmt(Math.min(...p))}〜</div><div class="ks fl">${fmt(Math.max(...p))}円/60kg</div></div>`;
+  document.getElementById('vpills').innerHTML=RV.map(vv=>`<button class="vb${vv===v?' on':''}" onclick="selV('${vv}')">${vv}</button>`).join('');
+  if(rcInst)rcInst.destroy();
+  const ctx=document.getElementById('rchart').getContext('2d');
+  rcInst=new Chart(ctx,{type:'line',
+    data:{labels:l,datasets:[{label:`${v} 卸値（円/60kg）`,data:p,borderColor:'#8b6b3d',backgroundColor:'rgba(139,107,61,.1)',tension:.3,
+      pointRadius:5,pointBackgroundColor:p.map((_,i)=>i===p.length-1?'#c0392b':'#8b6b3d'),fill:true,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{font:{family:'Noto Sans JP',size:12},color:'#1a1208'}},
+        tooltip:{callbacks:{label:c=>`${c.parsed.y.toLocaleString()}円`}}},
+      scales:{
+        x:{ticks:{font:{family:'Noto Sans JP',size:10},color:'#5a4020'},grid:{color:'rgba(200,185,122,.3)'}},
+        y:{ticks:{font:{family:'Noto Sans JP',size:11},color:'#5a4020',callback:v=>`¥${v.toLocaleString()}`},
+          grid:{color:'rgba(200,185,122,.3)'},min:base-1200,max:base+1200}
+      }
+    }
+  });
+}
+function selV(v){actV=v;renderRice(v);}
+
+// ── 田植え計算 ──
+function setV(id,v){document.getElementById(id).value=v;}
+
+function calc(){
+  const area=parseFloat(document.getElementById('fArea').value)||0;
+  const rows=parseInt(document.getElementById('rows').value)||6;
+  const rsp=parseFloat(document.getElementById('rSp').value)/100||.3;
+  const psp=parseFloat(document.getElementById('pSp').value)/100||.18;
+  const spb=parseFloat(document.getElementById('sPB').value)||150;
+  const ex=parseFloat(document.getElementById('exPct').value)/100||.1;
+  const sqm=area*100;
+  const tan=area/10;
+  const ppSqm=1/(rsp*psp);
+  const total=Math.round(ppSqm*sqm);
+  const tsubo=Math.round(ppSqm*3.3056);
+  // ✅ 実務式：面積(a)÷10 × 10aあたり必要枚数
+  const bPer10a=parseFloat(document.getElementById('boxPer10a').value)||22;
+  const net=Math.ceil(area/10*bPer10a);
+  const tot=Math.ceil(net*(1+ex));
+  const skgTotal=tot*spb/1000;
+  const spd=0.3*(rows/6);
+  const hrs=area/100/spd;
+  const hh=Math.floor(hrs),mm=Math.round((hrs-hh)*60);
+  let note='',ncls='rnote';
+  if(tsubo>=80){note=`坪${tsubo}株：密植 — 分げつは抑えられますが収量は安定します`;}
+  else if(tsubo>=50){note=`坪${tsubo}株：標準〜やや疎植 — バランスが良く推奨範囲内です`;ncls='rnote ok';}
+  else if(tsubo>=37){note=`坪${tsubo}株：疎植 — 分げつが増えますが初期生育を要確認`;}
+  else{note=`坪${tsubo}株：過疎植 — 収量低下リスクあり。株間を再検討推奨`;}
+  document.getElementById('rp').innerHTML=`
+    <div class="rt">計算結果 — ${area}a（${tan.toFixed(2)}反）</div>
+    <div class="rg">
+      <div class="ri hl"><div class="rl">必要苗箱数（予備${ex*100}%込み）</div><div class="rv">${tot}<span class="ru">箱</span></div></div>
+      <div class="ri"><div class="rl">正味箱数</div><div class="rv">${net}<span class="ru">箱</span></div></div>
+      <div class="ri"><div class="rl">予備箱数</div><div class="rv">${tot-net}<span class="ru">箱</span></div></div>
+      <div class="ri"><div class="rl">総株数</div><div class="rv">${total.toLocaleString()}<span class="ru">株</span></div></div>
+      <div class="ri"><div class="rl">坪あたり株数</div><div class="rv">${tsubo}<span class="ru">株/坪</span></div></div>
+      <div class="ri"><div class="rl">必要種籾量</div><div class="rv">${skgTotal.toFixed(1)}<span class="ru">kg</span></div></div>
+      <div class="ri"><div class="rl">作業時間目安</div><div class="rv">${hh}h${mm>0?mm+'m':''}<span class="ru">${rows}条機</span></div></div>
+      <div class="ri"><div class="rl">株間×条間</div><div class="rv" style="font-size:16px">${(psp*100).toFixed(0)}×${(rsp*100).toFixed(0)}<span class="ru">cm</span></div></div>
+    </div>
+    <div class="${ncls}">📊 ${note}</div>`;
+  recalcF();
+}
+
+let fields=[];
+function calcBox(area){
+  const bPer10a=parseFloat(document.getElementById('boxPer10a').value)||22;
+  const ex=parseFloat(document.getElementById('exPct').value)/100||.1;
+  // ✅ 実務式：面積(a)÷10 × 10aあたり必要枚数
+  return Math.ceil(Math.ceil(area/10*bPer10a)*(1+ex));
+}
+function recalcF(){renderF();}
+function addF(){
+  const nm=document.getElementById('fnm').value.trim();
+  const ar=parseFloat(document.getElementById('far').value);
+  if(!nm||!ar||ar<=0)return;
+  fields.push({id:Date.now(),nm,ar});
+  document.getElementById('fnm').value='';
+  document.getElementById('far').value='';
+  renderF();
+}
+function delF(id){fields=fields.filter(f=>f.id!==id);renderF();}
+function renderF(){
+  const el=document.getElementById('flist');
+  if(!fields.length){el.innerHTML='<div style="font-size:12px;color:var(--muted);font-weight:700;padding:6px 0;">圃場を追加してください</div>';document.getElementById('ftotal').style.display='none';return;}
+  let tot=0;
+  el.innerHTML=fields.map(f=>{const b=calcBox(f.ar);tot+=b;return `<div class="fl-row"><span class="fl-nm">${f.nm}</span><span class="fl-ar">${f.ar}a</span><span class="fl-bx">${b}箱</span><button class="fl-dl" onclick="delF(${f.id})">✕</button></div>`;}).join('');
+  document.getElementById('ftotal').style.display='flex';
+  document.getElementById('ftv').textContent=`${tot}箱`;
+}
+
+// ── 苗スケジュール計算 ──
+let nMode=1;
+function swMode(m){
+  nMode=m;
+  document.getElementById('mb1').classList.toggle('on',m===1);
+  document.getElementById('mb2').classList.toggle('on',m===2);
+  const lbl=m===1?'田植えをしたい日':'種まきをしたい日';
+  document.getElementById('naeLbl').textContent=lbl;
+  document.getElementById('naeChTitle').textContent=m===1?'田植え日 → 種まき・浸水日を計算':'種まき日 → 浸水・田植え適期を計算';
+  document.getElementById('naeRes').innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-weight:700;">日付を入力して計算してください</div>';
+}
+
+function soakD(sd){const m=sd.getMonth()+1;return m<=3?10:m===4?6:5;}
+function growD(sd){
+  const m=sd.getMonth()+1,d=sd.getDate();
+  if(m===3&&d<=20)return 30;
+  if(m===3)return 27;
+  if(m===4&&d<=10)return 26;
+  if(m===4&&d<=20)return 21;
+  return 20;
+}
+function addD(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
+function subD(d,n){return addD(d,-n);}
+function fd(d){return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${WD[d.getDay()]}）`;}
+function fds(d){return `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`;}
+
+function calcNae(){
+  const raw=document.getElementById('naeDate').value;
+  if(!raw){alert('日付を入力してください');return;}
+  const inp=new Date(raw+'T00:00:00');
+  let html='';
+
+  if(nMode===1){
+    // 田植え → 逆算
+    const taue=inp;
+    let seed=subD(taue,growD(subD(taue,20)));
+    for(let i=0;i<5;i++)seed=subD(taue,growD(seed));
+    const gd=growD(seed),sd=soakD(seed),soak=subD(seed,sd);
+    html=`<div class="tl">
+      <div class="tli wn">
+        <div class="tld"></div>
+        <div class="tll">① 浸水（温湯消毒）開始</div>
+        <div class="tdt">${fd(soak)}</div>
+        <div class="tdsc">種まきの${sd}日前に浸水を開始する</div>
+      </div>
+      <div class="tli">
+        <div class="tld"></div>
+        <div class="tll">② 種まき</div>
+        <div class="tdt">${fd(seed)}</div>
+        <div class="tdsc">育苗期間 ${gd}日苗</div>
+      </div>
+      <div class="tli hl">
+        <div class="tld"></div>
+        <div class="tll">③ 田植え</div>
+        <div class="tdt">${fd(taue)}</div>
+        <div class="tdsc">種まきから${gd}日後 — 田植え適期</div>
+      </div>
+    </div>
+    <div class="tsm">✅ 浸水 ${fds(soak)} → 種まき ${fds(seed)} → 田植え ${fds(taue)}</div>`;
+  } else {
+    // 種まき → 順算
+    const seed=inp,sd=soakD(seed),soak=subD(seed,sd),gd=growD(seed);
+    const t0=addD(seed,gd),t1=addD(t0,3);
+    html=`<div class="tl">
+      <div class="tli wn">
+        <div class="tld"></div>
+        <div class="tll">① 浸水（温湯消毒）開始</div>
+        <div class="tdt">${fd(soak)}</div>
+        <div class="tdsc">種まきの${sd}日前に浸水を開始する</div>
+      </div>
+      <div class="tli hl">
+        <div class="tld"></div>
+        <div class="tll">② 種まき</div>
+        <div class="tdt">${fd(seed)}</div>
+        <div class="tdsc">育苗期間 ${gd}日苗</div>
+      </div>
+      <div class="tli">
+        <div class="tld"></div>
+        <div class="tll">③ 田植え適期</div>
+        <div class="tdt">${fd(t0)}</div>
+        <div class="tdsc">〜 ${fd(t1)} が田植え適期</div>
+      </div>
+    </div>
+    <div class="tsm">✅ 浸水 ${fds(soak)} → 種まき ${fds(seed)} → 田植え適期 ${fds(t0)}〜${fds(t1)}</div>`;
+  }
+  document.getElementById('naeRes').innerHTML=html;
+}
+
+// 早見表生成
+function renderQt(){
+  const yr=new Date().getFullYear();
+  const start=new Date(yr,3,8),end=new Date(yr,5,25);
+  const today=new Date();today.setHours(0,0,0,0);
+  const rows=[];
+  for(let d=new Date(start);d<=end;d=addD(d,1)){
+    const taue=new Date(d);
+    let seed=subD(taue,growD(subD(taue,20)));
+    for(let i=0;i<5;i++)seed=subD(taue,growD(seed));
+    const gd=growD(seed),sd2=soakD(seed),soak=subD(seed,sd2);
+    const isTd=taue.getTime()===today.getTime();
+    rows.push(`<tr class="${isTd?'tdr':''}">
+      <td class="qt-t">${fds(taue)}</td>
+      <td class="qt-s">${fds(seed)}</td>
+      <td class="qt-w">${fds(soak)}</td>
+      <td>${gd}日苗</td>
+    </tr>`);
+  }
+  document.getElementById('qtBody').innerHTML=rows.join('');
+}
+
+// ── 初期化 ──
+function initNae(){
+  const n=new Date();
+  document.getElementById('naeDate').value=
+    `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+  renderQt();
+}
+
+function refreshAll(){
+  updDate();
+  // 天気はAPIから非同期取得
+  fetchWx();
+  // Chart.jsが読み込まれてから描画
+  if(typeof Chart!=='undefined'){renderRice(actV);}
+  renderF();
+}
+
+// Chart.js読み込み待ち
+function waitChart(){
+  if(typeof Chart!=='undefined'){refreshAll();initNae();fetchWx();}
+  else{setTimeout(waitChart,100);}
+}
+waitChart();
+setInterval(refreshAll,30*60*1000);
+
+// Enterキー
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return;
+  if(document.getElementById('p-taue').classList.contains('on'))calc();
+  if(document.getElementById('p-nae').classList.contains('on'))calcNae();
+});
+</script>
+
+
+
+<div class="panel" id="p-shuho">
+  <div class="shuho-layout">
+
+    <!-- 左：入力 -->
+    <div>
+      <div class="card">
+        <div class="ch"><span>🌾</span><span class="ch-t">品種・田植え日の選択</span></div>
+        <div class="cb">
+          <div class="igrp">
+            <label class="ilbl">品種を選択</label>
+            <select class="tsel" id="shVarietySelect" style="font-size:16px;font-weight:900;padding:12px;">
+              <option value="">— 品種を選んでください —</option>
+              <optgroup label="── 早植え（4月〜5月上旬）──">
+                <option value="koshi">コシヒカリ（早生・感温型）</option>
+                <option value="akita">あきたこまち（早生・感温型）</option>
+                <option value="mine">みねはるか（中生・感温型）</option>
+                <option value="niji">虹のきらめき（中生・感温感光型）</option>
+                <option value="kinu">きぬむすめ（中晩生・感光型）</option>
+                <option value="aichi">あいちのかおり（中晩生・感光型）</option>
+              </optgroup>
+              <optgroup label="── 5月中頃植え ──">
+                <option value="koshi_mid">コシヒカリ（5月中頃植え）</option>
+                <option value="mine_mid">みねはるか（5月中頃植え）</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="igrp">
+            <label class="ilbl">田植え日</label>
+            <input class="ndi" type="date" id="shDate" style="font-size:16px;">
+          </div>
+          <button class="ncbtn" onclick="calcShuho()">▶ 出穂日を予測する</button>
+
+          <!-- 参照データ -->
+          <div class="ref" style="margin-top:14px;">
+            <h4>【田原市・渥美半島 品種特性】</h4>
+            <div class="rr"><span class="rk">コシヒカリ</span><span class="rv2">早生・感温型</span></div>
+            <div class="rr"><span class="rk">あきたこまち</span><span class="rv2">早生・感温型</span></div>
+            <div class="rr"><span class="rk">みねはるか</span><span class="rv2">中生・感温型</span></div>
+            <div class="rr"><span class="rk">虹のきらめき</span><span class="rv2">中生・感温感光型</span></div>
+            <div class="rr"><span class="rk">きぬむすめ</span><span class="rv2">中晩生・感光型</span></div>
+            <div class="rr"><span class="rk">あいちのかおり</span><span class="rv2">中晩生・感光型</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右：結果 -->
+    <div>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="ch"><span>📊</span><span class="ch-t">出穂予測結果</span></div>
+        <div class="cb" id="shResult">
+          <div style="text-align:center;padding:30px;color:var(--muted);font-weight:700;">
+            品種と田植え日を選択して予測してください
+          </div>
+        </div>
+      </div>
+
+      <!-- 品種別一覧早見表 -->
+      <div class="card">
+        <div class="ch"><span>📋</span><span class="ch-t">品種別 出穂早見表</span><span class="ch-b" id="shTableBadge">—</span></div>
+        <div class="cb" style="overflow-x:auto;max-height:380px;overflow-y:auto;">
+          <table class="sh-table">
+            <thead>
+              <tr>
+                <th>品種</th>
+                <th>出穂予測日</th>
+                <th>中干し</th>
+                <th>穂肥適期</th>
+                <th>稲刈り予定</th>
+                <th>熟期</th>
+              </tr>
+            </thead>
+            <tbody id="shTableBody">
+              <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px;">田植え日を選択すると全品種の一覧が表示されます</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══ 出穂予測計算 ══
+// 田原市・渥美半島の気候（温暖、年平均気温約16℃）を考慮した
+// 品種別の基本出穂日数（田植えから出穂までの積算温度ベース）
+
+const VARIETIES_SHUHO = [
+  {
+    id:'koshi', name:'コシヒカリ', type:'早生・感温型',
+    // 田植え日別の出穂までの日数（渥美半島気候ベース）
+    // 感温型：田植えが早いと日数が長く、遅いと短い
+    baseDays:75, // 標準（5月中旬田植え）からの日数
+    // 田植え月日 → 補正日数（早植えは+、遅植えは-）
+    adjustByMonth:{4:8, 5:0, 6:-5},
+    earlyDate:'8/5', peakDate:'8/12', lateDate:'8/18',
+    note:'田原市では8月上〜中旬に出穂。高温障害に注意。',
+    maturity:'早生',
+  },
+  {
+    id:'akita', name:'あきたこまち', type:'早生・感温型',
+    baseDays:72,
+    adjustByMonth:{4:7, 5:0, 6:-4},
+    earlyDate:'8/3', peakDate:'8/10', lateDate:'8/15',
+    note:'コシヒカリより数日早く出穂。早植えで8月上旬。',
+    maturity:'早生',
+  },
+  {
+    id:'mine', name:'みねはるか', type:'中生・感温型',
+    baseDays:82,
+    adjustByMonth:{4:9, 5:0, 6:-4},
+    earlyDate:'8/12', peakDate:'8/20', lateDate:'8/28',
+    note:'8月中〜下旬に出穂。コシヒカリより約1週間遅い。',
+    maturity:'中生',
+  },
+  {
+    id:'niji', name:'虹のきらめき', type:'中生・感温感光型',
+    baseDays:85,
+    adjustByMonth:{4:8, 5:0, 6:-3},
+    earlyDate:'8/15', peakDate:'8/22', lateDate:'8/29',
+    note:'感温感光型。日長の影響も受けるため出穂期が比較的安定。',
+    maturity:'中生',
+  },
+  {
+    id:'kinu', name:'きぬむすめ', type:'中晩生・感光型',
+    baseDays:92,
+    // 感光型：田植え時期に関わらず出穂期がほぼ固定（日長で決まる）
+    adjustByMonth:{4:3, 5:0, 6:-2},
+    earlyDate:'8/25', peakDate:'9/1', lateDate:'9/8',
+    note:'感光型。田植え時期が多少ずれても出穂期は8/25〜9/5頃で安定。',
+    maturity:'中晩生',
+  },
+  {
+    id:'aichi', name:'あいちのかおり', type:'中晩生・感光型',
+    baseDays:95,
+    adjustByMonth:{4:3, 5:0, 6:-2},
+    earlyDate:'8/28', peakDate:'9/5', lateDate:'9/12',
+    note:'感光型。出穂期は9月上旬で安定。高温年は品質低下に注意。',
+    maturity:'中晩生',
+  },
+  {
+    id:'koshi_mid', name:'コシヒカリ（5月中頃植え）', type:'早生・感温型',
+    baseDays:68,
+    adjustByMonth:{4:0, 5:0, 6:-3},
+    earlyDate:'8/8', peakDate:'8/14', lateDate:'8/20',
+    note:'5月中旬田植えのコシヒカリ。出穂は8月中旬頃。高温障害に注意。',
+    maturity:'早生',
+  },
+  {
+    id:'mine_mid', name:'みねはるか（5月中頃植え）', type:'中生・感温型',
+    baseDays:77,
+    adjustByMonth:{4:0, 5:0, 6:-3},
+    earlyDate:'8/18', peakDate:'8/25', lateDate:'9/1',
+    note:'5月中旬田植えのみねはるか。出穂は8月下旬〜9月上旬頃。',
+    maturity:'中生',
+  },
+];
+
+
+
+function addDaysSh(date, n){
+  const d = new Date(date); d.setDate(d.getDate()+n); return d;
+}
+
+function fdSh(d){
+  return `${d.getMonth()+1}月${d.getDate()}日（${WD[d.getDay()]}）`;
+}
+function fdShort(d){
+  return `${d.getMonth()+1}/${d.getDate()}`;
+}
+
+function calcShuhoForVariety(v, plantDate){
+  const m = plantDate.getMonth()+1; // 1-12
+  // 基本日数 + 月別補正
+  let adj = 0;
+  if(m<=4) adj = v.adjustByMonth[4] || 0;
+  else if(m===5) adj = v.adjustByMonth[5] || 0;
+  else adj = v.adjustByMonth[6] || 0;
+
+  // 感光型は田植え時期補正を小さく（日長優位）
+  if(v.type.includes('感光型') && !v.type.includes('感温感光型')){
+    adj = Math.round(adj * 0.4);
+  }
+
+  const totalDays = v.baseDays + adj;
+  const peakDate = addDaysSh(plantDate, totalDays);
+  const earlyDate = addDaysSh(plantDate, totalDays - 4);
+  const lateDate  = addDaysSh(plantDate, totalDays + 4);
+  return {totalDays, peakDate, earlyDate, lateDate};
+}
+
+function calcShuho(){
+  const dateVal = document.getElementById('shDate').value;
+  if(!dateVal){ alert('田植え日を入力してください'); return; }
+  const varId = document.getElementById('shVarietySelect').value;
+  if(!varId){ alert('品種を選択してください'); return; }
+
+  const plantDate = new Date(dateVal+'T00:00:00');
+  const v = VARIETIES_SHUHO.find(x=>x.id===varId);
+  const {totalDays, peakDate, earlyDate, lateDate} = calcShuhoForVariety(v, plantDate);
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const daysFromPlant = Math.floor((today - plantDate)/864e5);
+  const daysToShuho  = Math.floor((peakDate - today)/864e5);
+
+  // ステージ判定
+  let stage = '';
+  if(daysFromPlant < 0) stage = '田植え前';
+  else if(daysFromPlant < 15) stage = '活着期';
+  else if(daysFromPlant < 30) stage = '分げつ期';
+  else if(daysFromPlant < 55) stage = '幼穂形成期';
+  else if(daysFromPlant < totalDays) stage = '出穂準備中';
+  else if(daysFromPlant < totalDays+20) stage = '出穂〜開花';
+  else stage = '登熟期';
+
+  // 高温注意判定（8月上旬〜中旬出穂は高温障害リスク）
+  const peakM = peakDate.getMonth()+1;
+  const peakD = peakDate.getDate();
+  let qualityNote = '';
+  let noteCls = 'sh-note';
+  if(peakM===8 && peakD<=15){
+    qualityNote = '⚠️ 出穂期が8月上〜中旬となり高温障害リスクがあります。出穂前後の水管理（掛け流し）で地温を下げる対策を検討してください。';
+    noteCls = 'sh-note warn';
+  } else if(peakM===8 && peakD<=25){
+    qualityNote = '✅ 出穂期が比較的良好な時期です。高温日が続く場合は夜間の掛け流しで対応してください。';
+    noteCls = 'sh-note good';
+  } else if(peakM===9){
+    qualityNote = '✅ 出穂期が9月に入り比較的安定した気温での登熟が期待できます。品質良好の可能性が高いです。';
+    noteCls = 'sh-note good';
+  } else {
+    qualityNote = `${v.note}`;
+    noteCls = 'sh-note';
+  }
+
+  // タイムラインのステージ
+  const stages = [
+    {name:'田植え', date:fdShort(plantDate), done: daysFromPlant>=0},
+    {name:'分げつ期', date:`+15〜30日`, done: daysFromPlant>=15},
+    {name:'幼穂形成', date:`+${Math.round(totalDays*0.7)}日頃`, done: daysFromPlant>=Math.round(totalDays*0.7)},
+    {name:'出穂', date:fdShort(peakDate), done: daysFromPlant>=totalDays},
+    {name:'登熟', date:`+20日後`, done: daysFromPlant>=totalDays+20},
+  ];
+
+  document.getElementById('shResult').innerHTML = `
+    <div class="sh-result-main">
+      <div class="sh-result-label">${v.name} の出穂予測日</div>
+      <div class="sh-result-date">${fdSh(peakDate)}</div>
+      <div class="sh-result-range">出穂期間: ${fdShort(earlyDate)} 〜 ${fdShort(lateDate)}</div>
+      <div class="sh-result-days">田植えから約${totalDays}日後</div>
+    </div>
+
+    <div class="sh-info-grid">
+      <div class="sh-info-card">
+        <div class="sh-info-label">田植え日</div>
+        <div class="sh-info-value">${fdSh(plantDate)}</div>
+      </div>
+      <div class="sh-info-card">
+        <div class="sh-info-label">現在のステージ</div>
+        <div class="sh-info-value">${stage}</div>
+      </div>
+      <div class="sh-info-card">
+        <div class="sh-info-label">田植えからの経過日数</div>
+        <div class="sh-info-value">${daysFromPlant>=0?daysFromPlant+'日':'田植え前'}</div>
+      </div>
+      <div class="sh-info-card">
+        <div class="sh-info-label">出穂まであと</div>
+        <div class="sh-info-value" style="color:${daysToShuho>0?'var(--bamboo)':'var(--red)'}">
+          ${daysToShuho>0?daysToShuho+'日':'出穂済み'}
+        </div>
+      </div>
+    </div>
+
+    <!-- タイムライン -->
+    <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;">生育ステージ</div>
+    <div class="sh-timeline">
+      ${stages.map((s,i)=>{
+        const isCurrent = (i===stages.findLastIndex(x=>x.done)) || (i===0&&!stages[0].done);
+        const cls = !s.done?'future':isCurrent?'current':'done';
+        return `<div class="sh-tl-item ${cls}">${s.name}<div class="sh-tl-date">${s.date}</div></div>`;
+      }).join('')}
+    </div>
+
+    <div class="${noteCls}">${qualityNote}</div>
+    ${buildNakaboshiHTML(v, plantDate, peakDate)}
+    ${buildFertHTML(v, peakDate)}
+    ${buildHarvestHTML(v, peakDate)}`;
+
+  // 全品種早見表も更新
+  renderShuhoTable(plantDate);
+}
+
+// ── 穂肥適期計算 ──
+// 品種別出穂前施用日数（農文協・各県栽培暦より）
+const FERT_DAYS = {
+  koshi:    [{days:15, label:'穂肥（1回）', note:'倒伏しやすいため出穂前15日が基本。葉色が淡い場合は18日前に早める。'}],
+  akita:    [{days:18, label:'穂肥（1回）', note:'コシヒカリより倒伏に強いため18日前が基本。'}],
+  mine:     [{days:20, label:'穂肥（1回）', note:'出穂前20日が基本。葉色・生育を見て18〜23日前で調整。'}],
+  niji:     [{days:20, label:'穂肥（1回）', note:'出穂前20日が基本。倒伏に強く食味重視で適期を守る。'}],
+  kinu:     [{days:20, label:'穂肥1回目', note:'出穂前20日が基本。'},
+             {days:5,  label:'穂肥2回目', note:'遅くとも出穂5日前までに施用。遅れると食味低下。'}],
+  aichi:    [{days:20, label:'穂肥（1回）', note:'出穂前20日が基本。出穂期8月下旬のため高温障害リスクが低く登熟安定。'}],
+  koshi_mid:[{days:15, label:'穂肥（1回）', note:'5月中旬田植えのコシヒカリ。出穂前15日が基本。'}],
+  mine_mid: [{days:20, label:'穂肥（1回）', note:'5月中旬田植えのみねはるか。出穂前20日が基本。'}],
+};
+
+function buildFertHTML(v, peakDate){
+  const fertDays = FERT_DAYS[v.id] || [{days:18, label:'穂肥', note:'出穂前18日が目安。'}];
+  const rows = fertDays.map(f => {
+    const fertDate = addDaysSh(peakDate, -f.days);
+    return `<div class="sh-fert-row">
+      <div class="sh-fert-left">
+        <div class="sh-fert-label">${f.label}</div>
+        <div class="sh-fert-date">${fdSh(fertDate)}</div>
+        <div class="sh-fert-sub">出穂${f.days}日前</div>
+      </div>
+      <div class="sh-fert-note">${f.note}</div>
+    </div>`;
+  }).join('');
+  return `<div class="sh-fert-box">
+    <div class="sh-fert-title">🌿 穂肥（追肥）適期</div>
+    ${rows}
+    <div class="sh-fert-caution">※葉色・生育状況で±3日調整。葉色が濃い場合は遅らせるか減量。出穂後の施肥は食味低下の原因。</div>
+  </div>`;
+}
+
+// ── 稲刈り予測 ──
+// 品種別：出穂後の収穫適期日数（愛知県・田原市向け）
+// 出典：JAあいち経済連・農文協・各県栽培暦
+const HARVEST_DAYS = {
+  koshi:    { days:40, range:5, note:'出穂後40日が目安。帯緑籾が10%になった時点が適期。早刈りは青米増加、遅刈りは胴割れ注意。' },
+  akita:    { days:38, range:4, note:'コシヒカリより2日程度早い。愛知県内で最初に出荷される極早生品種。8月中旬収穫が目安。' },
+  mine:     { days:45, range:5, note:'出穂後45日が目安。9月中旬収穫。みねはるかは登熟期間が長く品質が安定しやすい。' },
+  niji:     { days:40, range:7, note:'出穂後35〜45日（積算温度972〜1226℃）。収穫適期の幅が比較的広い。刈遅れても品質低下がわずか。' },
+  kinu:     { days:45, range:5, note:'中晩生品種。出穂後45日前後。早期落水しないよう注意。登熟期間が長いので適期をしっかり確認。' },
+  aichi:    { days:48, range:5, note:'晩生品種。出穂期8月下旬のため10月中旬収穫が目安。高温障害を受けにくく品質が安定しやすい。' },
+  koshi_mid:{ days:40, range:5, note:'5月中旬田植えのコシヒカリ。出穂後40日が目安。早植えより若干遅い9月上旬収穫になる場合も。' },
+  mine_mid: { days:45, range:5, note:'5月中旬田植えのみねはるか。出穂後45日が目安。9月下旬〜10月上旬収穫が目安。' },
+};
+
+// ── 中干しデータ（品種別）──
+// 出典：全農・JAあつぎ・農文協・各県栽培暦
+// 田植えから開始日数・期間日数・終了基準（出穂前）
+const NAKABOSHI_DATA = {
+  // 感温型早生：田植え後25〜30日で分げつが早く進む
+  koshi:    { startDays:28, periodDays:7,  endBeforeShuho:35, note:'田植え後28日頃開始。コシヒカリは分げつが旺盛なため早めに実施。幼穂形成期3日前までに終了（出穂35日前）。' },
+  akita:    { startDays:28, periodDays:7,  endBeforeShuho:35, note:'田植え後28日頃開始。コシヒカリ同様に早めの実施が基本。出穂35日前までに終了。' },
+  // 中生品種：田植え後30〜35日
+  mine:     { startDays:32, periodDays:7,  endBeforeShuho:35, note:'田植え後32日頃開始。中生品種のため分げつ期がやや長い。出穂35日前までに終了。' },
+  niji:     { startDays:30, periodDays:7,  endBeforeShuho:35, note:'田植え後30日頃開始。倒伏に強い品種だが過繁茂防止のため適期実施。出穂35日前までに終了。' },
+  // 中晩生・感光型：分げつ期が長く田植え後35日前後
+  kinu:     { startDays:35, periodDays:10, endBeforeShuho:40, note:'田植え後35日頃開始。中晩生品種は登熟期が長いため中干し期間も長め（10日）。出穂40日前までに終了。' },
+  aichi:    { startDays:35, periodDays:10, endBeforeShuho:40, note:'田植え後35日頃開始。晩生品種で分げつ期が長い。出穂40日前（幼穂形成期）までに必ず終了。' },
+  // 5月中頃植え（田植えが遅い分、気温が高く分げつが速い）
+  koshi_mid:{ startDays:25, periodDays:7,  endBeforeShuho:35, note:'5月中旬田植えのコシヒカリ。気温が高く分げつが早いため田植え後25日頃から開始。出穂35日前までに終了。' },
+  mine_mid: { startDays:28, periodDays:7,  endBeforeShuho:35, note:'5月中旬田植えのみねはるか。田植え後28日頃開始。出穂35日前までに終了。' },
+};
+
+function buildNakaboshiHTML(v, plantDate, peakDate){
+  const nd = NAKABOSHI_DATA[v.id] || { startDays:30, periodDays:7, endBeforeShuho:35, note:'田植え後30日頃開始が目安。' };
+  const startDate  = addDaysSh(plantDate, nd.startDays);
+  const endDate    = addDaysSh(plantDate, nd.startDays + nd.periodDays);
+  const limitDate  = addDaysSh(peakDate, -nd.endBeforeShuho); // 出穂N日前
+  // 溝切りは中干し開始3〜5日前
+  const mizoDate   = addDaysSh(startDate, -4);
+
+  return `<div class="sh-naka-box">
+    <div class="sh-naka-title">💧 中干し適期</div>
+    <div class="sh-naka-grid">
+      <div class="sh-naka-item">
+        <div class="sh-naka-label">溝切り（中干し4日前）</div>
+        <div class="sh-naka-date">${fdSh(mizoDate)}</div>
+      </div>
+      <div class="sh-naka-item hl">
+        <div class="sh-naka-label">中干し 開始</div>
+        <div class="sh-naka-date">${fdSh(startDate)}</div>
+        <div class="sh-naka-sub">田植えから${nd.startDays}日後</div>
+      </div>
+      <div class="sh-naka-item">
+        <div class="sh-naka-label">中干し 終了（目安）</div>
+        <div class="sh-naka-date">${fdSh(endDate)}</div>
+        <div class="sh-naka-sub">${nd.periodDays}日間程度</div>
+      </div>
+      <div class="sh-naka-item warn">
+        <div class="sh-naka-label">⚠️ 最終終了期限</div>
+        <div class="sh-naka-date">${fdSh(limitDate)}</div>
+        <div class="sh-naka-sub">出穂${nd.endBeforeShuho}日前（幼穂形成期）</div>
+      </div>
+    </div>
+    <div class="sh-naka-note">${nd.note}</div>
+    <div class="sh-naka-caution">
+      ✅ 田面に小さなひび割れ・軽く足跡がつく程度が適正。強すぎる中干しは根切れの原因。<br>
+      ✅ 目標茎数の7〜8割確保で開始。排水の悪い田は事前に溝切りを必ず実施。
+    </div>
+  </div>`;
+}
+
+function buildHarvestHTML(v, peakDate){
+  const hd = HARVEST_DAYS[v.id] || { days:42, range:5, note:'出穂後40〜45日が収穫の目安。' };
+  const harvestDate  = addDaysSh(peakDate, hd.days);
+  const harvestEarly = addDaysSh(peakDate, hd.days - hd.range);
+  const harvestLate  = addDaysSh(peakDate, hd.days + hd.range);
+  const fallWater    = addDaysSh(peakDate, hd.days - 14); // 落水は収穫14日前
+
+  return `<div class="sh-harvest-box">
+    <div class="sh-harvest-title">🌾 稲刈り（収穫）予定日</div>
+    <div class="sh-harvest-main">
+      <div class="sh-harvest-label">収穫適期（目安）</div>
+      <div class="sh-harvest-date">${fdSh(harvestDate)}</div>
+      <div class="sh-harvest-range">収穫期間: ${fdShort(harvestEarly)} 〜 ${fdShort(harvestLate)}</div>
+      <div class="sh-harvest-sub">出穂から約${hd.days}日後</div>
+    </div>
+    <div class="sh-harvest-row">
+      <div class="sh-harvest-item">
+        <div class="sh-harvest-item-label">落水（収穫14日前）</div>
+        <div class="sh-harvest-item-date">${fdSh(fallWater)}</div>
+      </div>
+    </div>
+    <div class="sh-harvest-note">${hd.note}</div>
+  </div>`;
+}
+
+function renderShuhoTable(plantDate){
+  const badge = `${plantDate.getMonth()+1}/${plantDate.getDate()} 田植え`;
+  document.getElementById('shTableBadge').textContent = badge;
+  const MATURITY_BADGE = {'早生':'badge-early','中生':'badge-mid','中晩生':'badge-late'};
+  document.getElementById('shTableBody').innerHTML = VARIETIES_SHUHO.map(v=>{
+    const {totalDays, peakDate, earlyDate, lateDate} = calcShuhoForVariety(v, plantDate);
+    const fd2 = FERT_DAYS[v.id] || [{days:18}];
+    const fertStrs = fd2.map(f=>{
+      const fd=addDaysSh(peakDate,-f.days);
+      return `<span style="font-size:11px;display:block;">${fdShort(fd)}（${f.label}）</span>`;
+    }).join('');
+    const hd2 = HARVEST_DAYS[v.id] || {days:42,range:5};
+    const hDate = addDaysSh(peakDate, hd2.days);
+    const hEarly = addDaysSh(peakDate, hd2.days - hd2.range);
+    const hLate  = addDaysSh(peakDate, hd2.days + hd2.range);
+    const nd2 = NAKABOSHI_DATA[v.id] || {startDays:30, periodDays:7};
+    const nStart = addDaysSh(plantDate, nd2.startDays);
+    const nEnd   = addDaysSh(plantDate, nd2.startDays + nd2.periodDays);
+    return `<tr>
+      <td class="sh-td-variety">${v.name}</td>
+      <td>
+        <div class="sh-td-shuho">${fdSh(peakDate)}</div>
+        <div class="sh-td-range">${fdShort(earlyDate)}〜${fdShort(lateDate)}</div>
+      </td>
+      <td>
+        <div style="font-size:12px;font-weight:900;color:var(--sky);">${fdShort(nStart)}開始</div>
+        <div style="font-size:10px;color:var(--muted);">${fdShort(nEnd)}終了目安</div>
+      </td>
+      <td style="color:var(--bamboo);font-weight:900;">${fertStrs}</td>
+      <td>
+        <div style="font-size:13px;font-weight:900;color:var(--red);">${fdShort(hDate)}</div>
+        <div style="font-size:10px;color:var(--muted);">${fdShort(hEarly)}〜${fdShort(hLate)}</div>
+      </td>
+      <td><span class="sh-badge ${MATURITY_BADGE[v.maturity]||''}">${v.maturity}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// 初期化
+function initShuho(){
+  // 今日の日付をデフォルト設定
+  const n = new Date();
+  document.getElementById('shDate').value =
+    `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+}
+
+// waitChart後に初期化
+const _origWait2 = waitChart;
+function waitChart(){
+  if(typeof Chart!=='undefined'){refreshAll();initNae();fetchWx();renderTopics();initShuho();}
+  else{setTimeout(waitChart,100);}
+}
+</script>
+</body>
+</html>
