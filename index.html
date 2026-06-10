@@ -421,10 +421,14 @@ body{
         <div class="ch"><span>🗺️</span><span class="ch-t">圃場別 必要苗箱数</span></div>
         <div class="cb">
           <div id="flist"></div>
-          <div class="af">
+          <div class="af" style="flex-wrap:wrap;gap:6px;">
             <input class="ai" id="fnm" placeholder="圃場名（例：沖新田）">
-            <input class="ai" id="far" type="number" placeholder="面積(a)" min="0.1" step="0.1" style="max-width:90px;">
+            <input class="ai" id="far" type="number" placeholder="面積(a)" min="0.1" step="0.1" style="max-width:80px;">
+            <input class="ai" id="fbx" type="number" placeholder="枚/10a" min="1" max="50" style="max-width:80px;">
             <button class="ab" onclick="addF()">＋追加</button>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-top:4px;">
+            ※ 枚/10a を空欄にすると上の「10aあたり必要枚数」の設定値を使用
           </div>
           <div class="tb" id="ftotal" style="display:none;">
             <span class="tbl">全圃場 合計必要箱数</span>
@@ -501,8 +505,18 @@ body{
         <div class="cb">
           <div id="hSlots"></div>
           <button class="cbtn" style="margin-top:8px" onclick="calcHanou()">▶ 積載計算する</button>
-          <div style="margin-top:10px;background:rgba(200,185,122,.12);border:1px solid var(--border2);border-radius:4px;padding:10px;font-size:12px;font-weight:700;color:var(--muted);line-height:1.9;">
-            <div>🚛 トラック積載: <b style="color:var(--text)">172枚</b></div>
+          <div class="igrp" style="margin-top:10px;">
+            <label class="ilbl">トラック最大積載枚数 <span style="font-size:10px;color:var(--bamboo);font-weight:700;">💾 自動保存</span></label>
+            <div class="irow"><input class="ti" type="number" id="truckCap" value="172" min="1" max="500" step="1" onchange="saveSettings()"><span class="iunt">枚/台</span></div>
+            <div class="chips">
+              <button class="chip" onclick="setVS('truckCap',72)">72枚</button>
+              <button class="chip" onclick="setVS('truckCap',160)">160枚</button>
+              <button class="chip" onclick="setVS('truckCap',172)">172枚（標準）</button>
+              <button class="chip" onclick="setVS('truckCap',200)">200枚</button>
+            </div>
+          </div>
+          <div style="background:rgba(200,185,122,.12);border:1px solid var(--border2);border-radius:4px;padding:10px;font-size:12px;font-weight:700;color:var(--muted);line-height:1.9;">
+            <div>🚛 トラック積載: <b style="color:var(--text)" id="truckCapLabel">172枚</b></div>
             <div>📐 棚構成: 上段 1棚4枚×10列×4列=160枚 ＋ 底棚 3枚×4列=12枚</div>
             <div>🌾 端数は下段（底棚の上）から配置</div>
           </div>
@@ -594,7 +608,7 @@ const VARIETIES = [
   {name:'後期コシヒカリ',   boxPer10a:24, fertPer10a:28},
   {name:'後期みねはるか',   boxPer10a:22, fertPer10a:30},
 ];
-const TRUCK_CAP = 172;
+function getTruckCap(){ return parseInt(document.getElementById("truckCap").value)||172; }
 const FERT_BAG_KG = 20;
 const FERT_EXTRA = 2; // 予備袋数
 
@@ -661,13 +675,13 @@ function calcHanou(){
   if(!loads.length){ alert('品種と枚数を入力してください'); return; }
 
   // トラック台数
-  const trucks = Math.ceil(totalBoxes / TRUCK_CAP);
+  const trucks = Math.ceil(totalBoxes / getTruckCap());
 
   // 各トラックの積み分け
   const truckLoads = [];
   let remaining = loads.map(l=>({...l, left:l.qty}));
   for(let t=0;t<trucks;t++){
-    const cap = TRUCK_CAP;
+    const cap = getTruckCap();
     let used = 0;
     const tl = [];
     remaining.forEach((r,ri)=>{
@@ -802,7 +816,7 @@ function buildBoxArray(tl){
   const queue = [];
   tl.boxes.forEach(b=>{ for(let i=0;i<b.qty;i++) queue.push({name:b.name}); });
 
-  if(total <= TRUCK_CAP){
+  if(total <= getTruckCap()){
     // 端数配置: 下から詰める
     // 上段160枚を下の列から埋める（row9→row0の順）
     let qi = 0;
@@ -941,7 +955,7 @@ function renderWx(src){
   const srcLabel = src || 'Open-Meteo（田原市）';
   document.getElementById('wxBody').innerHTML=
     '<div class="wg">'+days.map(d=>{
-      const dt=new Date(d.date+'T00:00:00');
+      const dt=new Date(d.date+'T12:00:00');
       const isT=d.date===today;
       return `<div class="wd${isT?' td':''}">
         <div class="wdt">${isT?'今日':`${dt.getMonth()+1}/${dt.getDate()}`}<br>${WD[dt.getDay()]}</div>
@@ -960,7 +974,7 @@ function renderTc(){
   if(!WX.length) return;
   const today=new Date().toISOString().slice(0,10);
   const ti=WX.findIndex(d=>d.date===today);
-  const labels=WX.map(d=>{const dt=new Date(d.date+'T00:00:00');return `${dt.getMonth()+1}/${dt.getDate()}(${WD[dt.getDay()]})`;});
+  const labels=WX.map(d=>{const dt=new Date(d.date+'T12:00:00');return `${dt.getMonth()+1}/${dt.getDate()}(${WD[dt.getDay()]})`;});
   if(tcInst)tcInst.destroy();
   const ctx=document.getElementById('tchart').getContext('2d');
   tcInst=new Chart(ctx,{
@@ -1041,6 +1055,44 @@ function selV(v){actV=v;renderRice(v);}
 
 // ── 田植え計算 ──
 function setV(id,v){document.getElementById(id).value=v;}
+// 設定保存付きsetV
+function setVS(id,v){
+  document.getElementById(id).value=v;
+  saveSettings();
+  // truckCapの場合はラベルも更新
+  if(id==='truckCap'){
+    const el=document.getElementById('truckCapLabel');
+    if(el) el.textContent=v+'枚';
+  }
+}
+// 設定をlocalStorageに保存
+function saveSettings(){
+  const s={
+    boxPer10a: document.getElementById('boxPer10a')?.value||'22',
+    truckCap:  document.getElementById('truckCap')?.value||'172',
+  };
+  localStorage.setItem('shinsenSettings', JSON.stringify(s));
+}
+// 圃場データを保存
+function saveFieldData(){
+  localStorage.setItem('shinsenFields', JSON.stringify(fields));
+}
+// 設定をlocalStorageから読込
+function loadSettings(){
+  try{
+    const s=JSON.parse(localStorage.getItem('shinsenSettings')||'{}');
+    if(s.boxPer10a && document.getElementById('boxPer10a'))
+      document.getElementById('boxPer10a').value=s.boxPer10a;
+    if(s.truckCap && document.getElementById('truckCap')){
+      document.getElementById('truckCap').value=s.truckCap;
+      const el=document.getElementById('truckCapLabel');
+      if(el) el.textContent=s.truckCap+'枚';
+    }
+    // 圃場データ読込
+    const fd=JSON.parse(localStorage.getItem('shinsenFields')||'[]');
+    if(fd.length){ fields=fd; renderF(); }
+  }catch(e){}
+}
 
 function calc(){
   const area=parseFloat(document.getElementById('fArea').value)||0;
@@ -1084,30 +1136,67 @@ function calc(){
 }
 
 let fields=[];
-function calcBox(area){
-  const bPer10a=parseFloat(document.getElementById('boxPer10a').value)||22;
+function calcBox(area, customBx){
+  // customBx: 圃場個別設定値（nullならデフォルト使用）
+  const bPer10a = (customBx && customBx>0) ? customBx :
+                  (parseFloat(document.getElementById('boxPer10a').value)||22);
   const ex=parseFloat(document.getElementById('exPct').value)/100||.1;
-  // ✅ 実務式：面積(a)÷10 × 10aあたり必要枚数
   return Math.ceil(Math.ceil(area/10*bPer10a)*(1+ex));
 }
 function recalcF(){renderF();}
 function addF(){
   const nm=document.getElementById('fnm').value.trim();
   const ar=parseFloat(document.getElementById('far').value);
+  const bx=parseFloat(document.getElementById('fbx').value);
   if(!nm||!ar||ar<=0)return;
-  fields.push({id:Date.now(),nm,ar});
+  // bxが入力されていれば個別設定、なければnull（デフォルト使用）
+  fields.push({id:Date.now(),nm,ar,bx:(!isNaN(bx)&&bx>0)?bx:null});
   document.getElementById('fnm').value='';
   document.getElementById('far').value='';
+  document.getElementById('fbx').value='';
+  saveFieldData();
   renderF();
 }
-function delF(id){fields=fields.filter(f=>f.id!==id);renderF();}
+function delF(id){fields=fields.filter(f=>f.id!==id);saveFieldData();renderF();}
 function renderF(){
   const el=document.getElementById('flist');
-  if(!fields.length){el.innerHTML='<div style="font-size:12px;color:var(--muted);font-weight:700;padding:6px 0;">圃場を追加してください</div>';document.getElementById('ftotal').style.display='none';return;}
+  if(!fields.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--muted);font-weight:700;padding:6px 0;">圃場を追加してください</div>';
+    document.getElementById('ftotal').style.display='none';
+    return;
+  }
   let tot=0;
-  el.innerHTML=fields.map(f=>{const b=calcBox(f.ar);tot+=b;return `<div class="fl-row"><span class="fl-nm">${f.nm}</span><span class="fl-ar">${f.ar}a</span><span class="fl-bx">${b}箱</span><button class="fl-dl" onclick="delF(${f.id})">✕</button></div>`;}).join('');
+  el.innerHTML=fields.map(f=>{
+    const b=calcBox(f.ar, f.bx);
+    tot+=b;
+    const defBx=parseFloat(document.getElementById('boxPer10a').value)||22;
+    const bxLabel=f.bx?`<span style="font-size:10px;background:rgba(192,57,43,.1);color:var(--red);border-radius:2px;padding:1px 5px;margin-left:3px;">個別${f.bx}枚</span>`
+                      :`<span style="font-size:10px;color:var(--muted);">${defBx}枚/10a</span>`;
+    return `<div class="fl-row" style="grid-template-columns:1fr auto auto auto auto;">
+      <span class="fl-nm">${f.nm}</span>
+      <span class="fl-ar">${f.ar}a ${bxLabel}</span>
+      <span class="fl-bx">${b}箱</span>
+      <button class="fl-dl" style="background:transparent;border:1px solid rgba(90,122,58,.4);color:var(--bamboo);border-radius:3px;padding:2px 8px;font-size:11px;cursor:pointer;" onclick="editBx(${f.id})">編集</button>
+      <button class="fl-dl" onclick="delF(${f.id})">✕</button>
+    </div>`;
+  }).join('');
   document.getElementById('ftotal').style.display='flex';
   document.getElementById('ftv').textContent=`${tot}箱`;
+}
+
+// 圃場の枚数/10aを個別編集
+function editBx(id){
+  const f=fields.find(f=>f.id===id);
+  if(!f) return;
+  const defBx=parseFloat(document.getElementById('boxPer10a').value)||22;
+  const cur=f.bx||defBx;
+  const v=prompt(`「${f.nm}」の10aあたり枚数を入力\n（現在: ${cur}枚/10a）`, cur);
+  if(v===null) return;
+  const n=parseFloat(v);
+  if(!isNaN(n)&&n>0) f.bx=n;
+  else if(v.trim()==='') f.bx=null; // 空欄でデフォルト戻し
+  saveFieldData();
+  renderF();
 }
 
 // ── 苗スケジュール計算 ──
@@ -1726,8 +1815,340 @@ function initShuho(){
 // waitChart後に初期化
 const _origWait2 = waitChart;
 function waitChart(){
-  if(typeof Chart!=='undefined'){refreshAll();initNae();fetchWx();renderTopics();initShuho();}
+  if(typeof Chart!=='undefined'){loadSettings();refreshAll();initNae();fetchWx();renderTopics();initShuho();initNendo();}
   else{setTimeout(waitChart,100);}
+}
+</script>
+<!-- ══ 年度別管理パネル ══ -->
+<style>
+.nendo-year-bar{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:rgba(200,185,122,.12);border:1px solid var(--border2);
+  border-radius:6px;padding:12px 14px;margin-bottom:14px;
+}
+.nendo-year-sel{
+  background:#fff;border:2px solid var(--border);color:var(--deep);
+  font-family:'Noto Sans JP',sans-serif;font-size:16px;font-weight:900;
+  padding:8px 12px;border-radius:4px;outline:none;cursor:pointer;
+}
+.nendo-new-btn{
+  background:var(--bamboo);color:#fff;border:none;border-radius:4px;
+  padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;
+}
+.nendo-new-btn:hover{background:var(--deep);}
+.nendo-del-btn{
+  background:transparent;border:1px solid rgba(192,57,43,.4);
+  color:var(--red);border-radius:4px;padding:8px 12px;
+  font-size:12px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;
+}
+
+.nendo-section{
+  background:var(--card);border:2px solid var(--border);
+  border-radius:4px;box-shadow:3px 3px 0 var(--soil);
+  overflow:hidden;margin-bottom:14px;
+}
+.nendo-sec-head{
+  background:var(--head-bg);padding:8px 14px;
+  display:flex;align-items:center;gap:8px;
+}
+.nendo-sec-title{font-size:13px;font-weight:700;color:#fff;letter-spacing:.1em;}
+.nendo-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:10px;padding:12px;
+}
+.nendo-variety-card{
+  border:2px solid var(--border2);border-radius:6px;padding:12px;
+  background:rgba(200,185,122,.06);
+}
+.nendo-v-name{
+  font-size:14px;font-weight:900;color:var(--deep);
+  margin-bottom:10px;padding-bottom:6px;
+  border-bottom:1px dashed var(--border2);
+}
+.nendo-row{
+  display:flex;align-items:center;gap:8px;margin-bottom:8px;
+}
+.nendo-row:last-child{margin-bottom:0;}
+.nendo-lbl{font-size:11px;font-weight:700;color:var(--muted);min-width:90px;}
+.nendo-input{
+  background:#fff;border:2px solid var(--border);color:var(--deep);
+  font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:900;
+  padding:6px 10px;border-radius:4px;width:80px;outline:none;
+}
+.nendo-input:focus{border-color:var(--bamboo);}
+.nendo-unit{font-size:11px;font-weight:700;color:var(--muted);}
+
+.nendo-save-btn{
+  width:100%;padding:13px;background:var(--bamboo);color:#fff;
+  border:none;border-radius:4px;font-size:15px;font-weight:700;
+  font-family:'Noto Sans JP',sans-serif;cursor:pointer;margin-top:4px;
+}
+.nendo-save-btn:hover{background:var(--deep);}
+
+.nendo-history{padding:12px;}
+.nendo-hist-row{
+  display:grid;grid-template-columns:80px 1fr 1fr 1fr;
+  gap:8px;align-items:center;padding:8px 0;
+  border-bottom:1px dashed var(--border2);font-size:13px;font-weight:700;
+}
+.nendo-hist-row:last-child{border-bottom:none;}
+.nendo-hist-year{color:var(--bamboo);font-size:15px;font-weight:900;}
+.nendo-hist-hd{
+  font-size:11px;font-weight:900;color:var(--muted);
+  border-bottom:2px solid var(--border)!important;
+}
+.nendo-active-badge{
+  display:inline-block;background:var(--bamboo);color:#fff;
+  font-size:10px;font-weight:700;padding:2px 8px;
+  border-radius:2px;margin-left:6px;
+}
+
+.nendo-memo-area{
+  width:100%;border:2px solid var(--border);border-radius:4px;
+  padding:10px;font-family:'Noto Sans JP',sans-serif;font-size:13px;
+  font-weight:700;color:var(--text);resize:vertical;min-height:80px;
+  outline:none;background:#fff;
+}
+.nendo-memo-area:focus{border-color:var(--bamboo);}
+</style>
+
+<div class="panel" id="p-nendo">
+  <div style="padding:0 0 10px;">
+
+    <!-- 年度選択バー -->
+    <div class="nendo-year-bar">
+      <div style="font-size:14px;font-weight:900;color:var(--deep);">表示年度：</div>
+      <select class="nendo-year-sel" id="nendoSel" onchange="loadNendo()"></select>
+      <button class="nendo-new-btn" onclick="newNendo()">＋ 新年度を作成</button>
+      <button class="nendo-del-btn" onclick="delNendo()">削除</button>
+      <span style="font-size:12px;font-weight:700;color:var(--muted);">
+        💾 保存ボタンを押すと年度に記録されます
+      </span>
+    </div>
+
+    <!-- 品種別設定 -->
+    <div class="nendo-section">
+      <div class="nendo-sec-head">
+        <span>🌾</span>
+        <span class="nendo-sec-title">品種別 栽培設定（10aあたり）</span>
+      </div>
+      <div class="nendo-grid" id="nendoVarietyGrid"></div>
+    </div>
+
+    <!-- 作業メモ -->
+    <div class="nendo-section">
+      <div class="nendo-sec-head">
+        <span>📝</span>
+        <span class="nendo-sec-title">今年の作業メモ・気象記録</span>
+      </div>
+      <div style="padding:12px;">
+        <textarea class="nendo-memo-area" id="nendoMemo"
+          placeholder="例：今年は高温でコシヒカリの品質がやや低下。来年は出穂前の夜間掛け流しを検討。&#10;5月田植え期：天候良好、苗の活着良好。&#10;除草剤の効果：例年通り良好。"></textarea>
+      </div>
+    </div>
+
+    <!-- 保存ボタン -->
+    <button class="nendo-save-btn" onclick="saveNendo()">
+      💾 この年度の設定を保存する
+    </button>
+
+    <!-- 過去年度の比較表 -->
+    <div class="nendo-section" style="margin-top:14px;">
+      <div class="nendo-sec-head">
+        <span>📊</span>
+        <span class="nendo-sec-title">年度別 比較表（コシヒカリ）</span>
+      </div>
+      <div class="nendo-history" id="nendoHistory"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══ 年度別管理 ══
+
+// 品種リスト（苗搬出管理のVARIETIESと同期）
+const NENDO_VARIETIES = [
+  {id:'koshi',    name:'コシヒカリ',     defBox:22, defFert:25},
+  {id:'akita',    name:'あきたこまち',   defBox:24, defFert:34},
+  {id:'mine',     name:'みねはるか',     defBox:22, defFert:30},
+  {id:'kinu',     name:'きぬむすめ',     defBox:22, defFert:30},
+  {id:'niji',     name:'虹のきらめき',   defBox:24, defFert:40},
+  {id:'aichi',    name:'あいちのかおり', defBox:24, defFert:30},
+  {id:'koshi_l',  name:'後期コシヒカリ', defBox:24, defFert:28},
+  {id:'mine_l',   name:'後期みねはるか', defBox:22, defFert:30},
+];
+
+function getNendoKey(year){ return `shinsen_nendo_${year}`; }
+function getYearList(){
+  const keys=[];
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k&&k.startsWith('shinsen_nendo_')) keys.push(parseInt(k.replace('shinsen_nendo_','')));
+  }
+  return keys.sort((a,b)=>b-a);
+}
+
+function getActiveYear(){
+  return parseInt(localStorage.getItem('shinsen_active_nendo')||new Date().getFullYear());
+}
+
+function initNendoSel(){
+  const sel=document.getElementById('nendoSel');
+  const years=getYearList();
+  const curYear=new Date().getFullYear();
+  // 現在年がなければ自動作成
+  if(!years.includes(curYear)){
+    createNendoData(curYear);
+    years.unshift(curYear);
+  }
+  const active=getActiveYear();
+  sel.innerHTML=years.map(y=>
+    `<option value="${y}" ${y===active?'selected':''}>${y}年${y===curYear?'（今年）':''}</option>`
+  ).join('');
+}
+
+function createNendoData(year){
+  const data={
+    year,
+    varieties: NENDO_VARIETIES.map(v=>({
+      id:v.id, name:v.name, box:v.defBox, fert:v.defFert
+    })),
+    memo:'',
+    created: new Date().toISOString().slice(0,10)
+  };
+  localStorage.setItem(getNendoKey(year), JSON.stringify(data));
+  return data;
+}
+
+function loadNendoData(year){
+  try{
+    const d=JSON.parse(localStorage.getItem(getNendoKey(year)));
+    if(d) return d;
+  }catch(e){}
+  return createNendoData(year);
+}
+
+function loadNendo(){
+  const year=parseInt(document.getElementById('nendoSel').value);
+  localStorage.setItem('shinsen_active_nendo', year);
+  const data=loadNendoData(year);
+  renderNendoGrid(data);
+  document.getElementById('nendoMemo').value=data.memo||'';
+  renderNendoHistory();
+}
+
+function renderNendoGrid(data){
+  const curYear=new Date().getFullYear();
+  const selYear=parseInt(document.getElementById('nendoSel').value);
+  document.getElementById('nendoVarietyGrid').innerHTML=
+    data.varieties.map(v=>`
+    <div class="nendo-variety-card">
+      <div class="nendo-v-name">🌾 ${v.name}</div>
+      <div class="nendo-row">
+        <span class="nendo-lbl">苗箱枚数</span>
+        <input class="nendo-input" type="number" id="nb_${v.id}" value="${v.box}" min="1" max="50">
+        <span class="nendo-unit">枚/10a</span>
+      </div>
+      <div class="nendo-row">
+        <span class="nendo-lbl">肥料散布量</span>
+        <input class="nendo-input" type="number" id="nf_${v.id}" value="${v.fert}" min="0" max="100">
+        <span class="nendo-unit">kg/10a</span>
+      </div>
+    </div>`).join('');
+}
+
+function saveNendo(){
+  const year=parseInt(document.getElementById('nendoSel').value);
+  const data=loadNendoData(year);
+  // 入力値を収集
+  data.varieties=NENDO_VARIETIES.map(v=>{
+    const box=parseFloat(document.getElementById('nb_'+v.id)?.value)||v.defBox;
+    const fert=parseFloat(document.getElementById('nf_'+v.id)?.value)||v.defFert;
+    return {id:v.id, name:v.name, box, fert};
+  });
+  data.memo=document.getElementById('nendoMemo').value;
+  data.saved=new Date().toISOString().slice(0,10);
+  localStorage.setItem(getNendoKey(year), JSON.stringify(data));
+
+  // 田植え計算の「10aあたり枚数」も今年のコシヒカリに同期
+  const koshi=data.varieties.find(v=>v.id==='koshi');
+  if(koshi && document.getElementById('boxPer10a'))
+    document.getElementById('boxPer10a').value=koshi.box;
+  saveSettings();
+
+  // 苗搬出管理の品種別肥料量も同期
+  syncHanouFert(data);
+
+  renderNendoHistory();
+  alert(`✅ ${year}年度の設定を保存しました！
+田植え計算・苗搬出管理にも反映されました。`);
+}
+
+// 苗搬出管理の肥料量を年度設定に同期
+function syncHanouFert(data){
+  if(typeof VARIETIES === 'undefined') return;
+  data.varieties.forEach(nv=>{
+    const hv=VARIETIES.find(v=>v.name===nv.name);
+    if(hv) hv.fertPer10a=nv.fert;
+  });
+}
+
+function newNendo(){
+  const y=prompt('新しく作成する年度を入力してください（例：2027）', new Date().getFullYear()+1);
+  if(!y) return;
+  const year=parseInt(y);
+  if(isNaN(year)||year<2000||year>2100){ alert('正しい年度を入力してください'); return; }
+  if(getYearList().includes(year)){ alert(`${year}年度はすでに存在します`); return; }
+  // 今年のデータをコピーして新年度を作成
+  const cur=loadNendoData(getActiveYear());
+  const newData={...cur, year, memo:'', created:new Date().toISOString().slice(0,10)};
+  localStorage.setItem(getNendoKey(year), JSON.stringify(newData));
+  initNendoSel();
+  document.getElementById('nendoSel').value=year;
+  loadNendo();
+  alert(`✅ ${year}年度を作成しました！
+今年の設定をコピーしています。変更後に保存してください。`);
+}
+
+function delNendo(){
+  const year=parseInt(document.getElementById('nendoSel').value);
+  const curYear=new Date().getFullYear();
+  if(year===curYear){ alert('今年度は削除できません'); return; }
+  if(!confirm(`${year}年度のデータを削除しますか？`)) return;
+  localStorage.removeItem(getNendoKey(year));
+  initNendoSel();
+  loadNendo();
+}
+
+function renderNendoHistory(){
+  const years=getYearList();
+  if(years.length===0){ document.getElementById('nendoHistory').innerHTML='<div style="color:var(--muted);font-size:12px;">データがありません</div>'; return; }
+  const koshiData=years.map(y=>{
+    const d=loadNendoData(y);
+    const k=d.varieties.find(v=>v.id==='koshi');
+    return {year:y, box:k?.box||22, fert:k?.fert||25, memo:d.memo?.slice(0,30)||''};
+  });
+  const active=getActiveYear();
+  document.getElementById('nendoHistory').innerHTML=`
+    <div class="nendo-hist-row nendo-hist-hd">
+      <div>年度</div><div>苗箱枚数</div><div>肥料散布量</div><div>メモ（一部）</div>
+    </div>
+    ${koshiData.map(d=>`
+    <div class="nendo-hist-row" style="${d.year===active?'background:rgba(90,122,58,.08);':''}">
+      <div class="nendo-hist-year">${d.year}年${d.year===active?'<span class="nendo-active-badge">表示中</span>':''}</div>
+      <div style="font-weight:900;color:var(--text);">${d.box}枚/10a</div>
+      <div style="font-weight:900;color:var(--text);">${d.fert}kg/10a</div>
+      <div style="font-size:11px;color:var(--muted);">${d.memo||'—'}</div>
+    </div>`).join('')}`;
+}
+
+// 初期化
+function initNendo(){
+  initNendoSel();
+  loadNendo();
 }
 </script>
 </body>
